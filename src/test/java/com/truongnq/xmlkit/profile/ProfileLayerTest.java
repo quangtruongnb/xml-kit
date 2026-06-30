@@ -22,8 +22,8 @@ import org.w3c.dom.Element;
 
 class ProfileLayerTest {
     private final DigestEngine digestEngine = new DigestEngine();
-    private final SignedInfoBuilder signedInfoBuilder = new SignedInfoBuilder(digestEngine);
-    private final ProfileObjectBuilderFactory factory = new ProfileObjectBuilderFactory(digestEngine);
+    private final SignedInfoBuilder signedInfoBuilder = new SignedInfoBuilder(digestEngine, "ds");
+    private final ProfileObjectBuilderFactory factory = new ProfileObjectBuilderFactory(digestEngine, "ds");
 
     @Test
     void selectsXmlDsigBuilderForXmlDsigProfile() {

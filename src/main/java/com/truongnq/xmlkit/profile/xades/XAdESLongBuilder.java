@@ -13,7 +13,8 @@ import org.w3c.dom.Element;
 public final class XAdESLongBuilder extends AbstractXAdESProfileBuilder {
     private final DigestEngine digestEngine;
 
-    public XAdESLongBuilder(DigestEngine digestEngine) {
+    public XAdESLongBuilder(DigestEngine digestEngine, String prefix) {
+        super(prefix);
         this.digestEngine = digestEngine;
     }
 

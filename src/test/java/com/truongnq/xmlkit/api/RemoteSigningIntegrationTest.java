@@ -61,6 +61,9 @@ class RemoteSigningIntegrationTest {
 
     @Test
     void xmldsigFlowSupportsDetachedSignature() {
+
+        long start = System.currentTimeMillis();
+
         FakeRemoteSigner remoteSigner = new FakeRemoteSigner();
         SigningRequest request = XmlSignatureBuilder
                 .forDocument(TestXml.document("<root><slot>1</slot><demo/></root>"))
@@ -69,6 +72,7 @@ class RemoteSigningIntegrationTest {
                 .certificate(TestCertificates.certificate())
                 .targetXPath("//slot")
                 .placementXPath("//demo")
+                .prefix("")
                 .prepare();
 
         byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
@@ -80,6 +84,9 @@ class RemoteSigningIntegrationTest {
         assertFalse(signed.xml().contains("UnsignedProperties"));
         assertTrue(signed.xml().contains("id-"));
 
+        System.out.println(signed.xml());
+
+        System.out.println("Time: " + (System.currentTimeMillis() - start));
     }
 
     @Test

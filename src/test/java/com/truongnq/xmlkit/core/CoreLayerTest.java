@@ -68,7 +68,7 @@ class CoreLayerTest {
         Document document = TestXml.document("<root><payload>abc</payload></root>");
         Element payload = (Element) document.getDocumentElement().getFirstChild();
 
-        ReferenceData reference = new ReferenceBuilder(new DigestEngine(), new CanonicalizationEngine()).build(
+        ReferenceData reference = new ReferenceBuilder(new DigestEngine(), new CanonicalizationEngine(), "ds").build(
             document,
             payload,
             SignatureType.DETACHED,
@@ -89,7 +89,7 @@ class CoreLayerTest {
         DigestEngine digestEngine = new DigestEngine();
         CanonicalizationEngine canonicalizationEngine = new CanonicalizationEngine();
 
-        ReferenceData reference = new ReferenceBuilder(digestEngine, canonicalizationEngine).build(
+        ReferenceData reference = new ReferenceBuilder(digestEngine, canonicalizationEngine, "ds").build(
             document,
             payload,
             SignatureType.DETACHED,
@@ -116,7 +116,7 @@ class CoreLayerTest {
         Document document = TestXml.document("<root><payload>abc</payload></root>");
         ReferenceData fixedReference = new ReferenceData("custom-uri", "custom-digest-method", "custom-digest-value", java.util.List.of());
         SignedInfoBuilder builder = new SignedInfoBuilder(
-            new ReferenceBuilder(new DigestEngine(), new CanonicalizationEngine()) {
+            new ReferenceBuilder(new DigestEngine(), new CanonicalizationEngine(), "ds") {
                 @Override
                 public ReferenceData build(
                     Document ignoredDocument,
@@ -129,7 +129,8 @@ class CoreLayerTest {
                     return fixedReference;
                 }
             },
-            new CanonicalizationEngine()
+            new CanonicalizationEngine(),
+            "ds"
         );
 
         SignedInfoData signedInfo = builder.build(

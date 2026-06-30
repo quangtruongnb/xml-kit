@@ -12,11 +12,11 @@ public final class ProfileObjectBuilderFactory {
     private final XAdESTBuilder xadestBuilder;
     private final XAdESLongBuilder xadesLongBuilder;
 
-    public ProfileObjectBuilderFactory(DigestEngine digestEngine) {
+    public ProfileObjectBuilderFactory(DigestEngine digestEngine, String prefix) {
         this.xmlDsigProfileBuilder = new XmlDsigProfileBuilder();
-        this.xadesbesBuilder = new XAdESBESBuilder();
-        this.xadestBuilder = new XAdESTBuilder(digestEngine);
-        this.xadesLongBuilder = new XAdESLongBuilder(digestEngine);
+        this.xadesbesBuilder = new XAdESBESBuilder(prefix);
+        this.xadestBuilder = new XAdESTBuilder(digestEngine, prefix);
+        this.xadesLongBuilder = new XAdESLongBuilder(digestEngine, prefix);
     }
 
     public ProfileObjectBuilder forProfile(SignatureProfile profile) {

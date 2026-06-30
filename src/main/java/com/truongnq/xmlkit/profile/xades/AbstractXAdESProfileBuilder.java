@@ -13,11 +13,20 @@ import org.w3c.dom.Element;
 abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
     protected static final String DS_NS = "http://www.w3.org/2000/09/xmldsig#";
     protected static final String XADES_NS = "http://uri.etsi.org/01903/v1.3.2#";
+    protected final String prefix;
+
+    protected AbstractXAdESProfileBuilder(String prefix) {
+        this.prefix = prefix;
+    }
+
+    protected String qName(String localName) {
+        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
+    }
 
     @Override
     public final Element buildProfileObject(PreparedSignature prepared, byte[] timestampToken, ValidationMaterial validationMaterial) {
         Document document = prepared.document();
-        Element object = document.createElementNS(DS_NS, "ds:Object");
+        Element object = document.createElementNS(DS_NS, qName("Object"));
         Element qualifyingProperties = document.createElementNS(XADES_NS, "xades:QualifyingProperties");
         object.appendChild(qualifyingProperties);
 
@@ -61,9 +70,9 @@ abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
     protected Element buildCertificateRef(Document document, X509Certificate certificate, String certificateDigest) {
         Element cert = document.createElementNS(XADES_NS, "xades:Cert");
         Element certDigest = document.createElementNS(XADES_NS, "xades:CertDigest");
-        Element digestMethod = document.createElementNS(DS_NS, "ds:DigestMethod");
+        Element digestMethod = document.createElementNS(DS_NS, qName("DigestMethod"));
         digestMethod.setAttribute("Algorithm", DigestAlgorithm.SHA256.uri());
-        Element digestValue = textElement(document, DS_NS, "ds:DigestValue", certificateDigest);
+        Element digestValue = textElement(document, DS_NS, qName("DigestValue"), certificateDigest);
         certDigest.appendChild(digestMethod);
         certDigest.appendChild(digestValue);
 
@@ -71,13 +80,13 @@ abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
         issuerSerial.appendChild(textElement(
             document,
             DS_NS,
-            "ds:X509IssuerName",
+            qName("X509IssuerName"),
             certificate.getIssuerX500Principal().getName()
         ));
         issuerSerial.appendChild(textElement(
             document,
             DS_NS,
-            "ds:X509SerialNumber",
+            qName("X509SerialNumber"),
             certificate.getSerialNumber().toString()
         ));
 

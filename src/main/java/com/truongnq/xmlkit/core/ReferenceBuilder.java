@@ -14,9 +14,16 @@ public class ReferenceBuilder {
     private final DigestEngine digestEngine;
     private final CanonicalizationEngine canonicalizationEngine;
 
-    public ReferenceBuilder(DigestEngine digestEngine, CanonicalizationEngine canonicalizationEngine) {
+    private final String prefix;
+
+    public ReferenceBuilder(DigestEngine digestEngine, CanonicalizationEngine canonicalizationEngine, String prefix) {
         this.digestEngine = digestEngine;
         this.canonicalizationEngine = canonicalizationEngine;
+        this.prefix = prefix;
+    }
+
+    private String qName(String localName) {
+        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
     }
 
     public ReferenceData build(
@@ -58,10 +65,11 @@ public class ReferenceBuilder {
 
     private Node buildEnvelopingObjectNode(Document document, Node payloadNode, String objectId) {
         Document detachedDocument = XmlSupport.newDocument();
-        Element signature = detachedDocument.createElementNS("http://www.w3.org/2000/09/xmldsig#", "ds:Signature");
-        signature.setAttribute("xmlns:ds", "http://www.w3.org/2000/09/xmldsig#");
+        Element signature = detachedDocument.createElementNS("http://www.w3.org/2000/09/xmldsig#", qName("Signature"));
+        String xmlnsAttr = prefix != null && !prefix.isEmpty() ? "xmlns:" + prefix : "xmlns";
+        signature.setAttribute(xmlnsAttr, "http://www.w3.org/2000/09/xmldsig#");
         detachedDocument.appendChild(signature);
-        Element object = detachedDocument.createElementNS("http://www.w3.org/2000/09/xmldsig#", "ds:Object");
+        Element object = detachedDocument.createElementNS("http://www.w3.org/2000/09/xmldsig#", qName("Object"));
         object.setAttribute("Id", objectId);
         Node payload = payloadNode == null ? document.getDocumentElement() : payloadNode;
         object.appendChild(detachedDocument.importNode(payload, true));

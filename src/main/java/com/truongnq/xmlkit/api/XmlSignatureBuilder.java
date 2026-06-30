@@ -2,6 +2,7 @@ package com.truongnq.xmlkit.api;
 
 import com.truongnq.xmlkit.core.DigestEngine;
 import com.truongnq.xmlkit.core.PlacementResolver;
+import com.truongnq.xmlkit.core.ReferenceBuilder;
 import com.truongnq.xmlkit.core.SignatureAssembler;
 import com.truongnq.xmlkit.core.SignedInfoBuilder;
 import com.truongnq.xmlkit.core.XmlSupport;
@@ -19,12 +20,11 @@ import org.w3c.dom.Node;
 public final class XmlSignatureBuilder {
     private final DigestEngine digestEngine = new DigestEngine();
     private final PlacementResolver placementResolver = new PlacementResolver();
-    private final SignedInfoBuilder signedInfoBuilder = new SignedInfoBuilder(digestEngine);
-    private final SignatureAssembler signatureAssembler = new SignatureAssembler(digestEngine);
 
     private Document document;
     private SignatureType signatureType = SignatureType.ENVELOPED;
     private SignatureProfile profile = SignatureProfile.XMLDSIG;
+    private String prefix = "ds";
     private DigestAlgorithm digestAlgorithm = DigestAlgorithm.SHA256;
     private CanonicalizationMethod canonicalizationMethod = CanonicalizationMethod.C14N_INCLUSIVE;
     private X509Certificate certificate;
@@ -49,6 +49,11 @@ public final class XmlSignatureBuilder {
 
     public XmlSignatureBuilder profile(SignatureProfile profile) {
         this.profile = profile;
+        return this;
+    }
+
+    public XmlSignatureBuilder prefix(String prefix) {
+        this.prefix = prefix;
         return this;
     }
 
@@ -107,6 +112,8 @@ public final class XmlSignatureBuilder {
         var placementTarget = placementResolver.resolve(workingDocument, placementXPath, placementNamespaces);
         validatePlacementTarget(placementTarget);
         Node payloadNode = resolvePayloadNode(workingDocument, placementTarget);
+        var signedInfoBuilder = new SignedInfoBuilder(digestEngine, prefix);
+        var signatureAssembler = new SignatureAssembler(digestEngine, prefix);
         var signedInfo = signedInfoBuilder.build(
             workingDocument,
             payloadNode,

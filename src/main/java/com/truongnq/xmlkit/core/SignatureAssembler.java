@@ -16,10 +16,16 @@ public final class SignatureAssembler {
 
     private final DigestEngine digestEngine;
     private final ProfileObjectBuilderFactory profileObjectBuilderFactory;
+    private final String prefix;
 
-    public SignatureAssembler(DigestEngine digestEngine) {
+    public SignatureAssembler(DigestEngine digestEngine, String prefix) {
         this.digestEngine = digestEngine;
-        this.profileObjectBuilderFactory = new ProfileObjectBuilderFactory(digestEngine);
+        this.profileObjectBuilderFactory = new ProfileObjectBuilderFactory(digestEngine, prefix);
+        this.prefix = prefix;
+    }
+
+    private String qName(String localName) {
+        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
     }
 
     public SignedDocument assemble(PreparedSignature prepared, byte[] signatureValue) {
@@ -37,9 +43,9 @@ public final class SignatureAssembler {
         ValidationMaterial validationMaterial
     ) {
         Document document = prepared.document();
-        Element signature = document.createElementNS(DS_NS, "ds:Signature");
+        Element signature = document.createElementNS(DS_NS, qName("Signature"));
         signature.appendChild(prepared.signedInfo().element());
-        signature.appendChild(textElement(document, DS_NS, "ds:SignatureValue", digestEngine.base64(signatureValue)));
+        signature.appendChild(textElement(document, DS_NS, qName("SignatureValue"), digestEngine.base64(signatureValue)));
         signature.appendChild(buildKeyInfo(document, prepared));
         Element profileObject = profileObjectBuilderFactory
             .forProfile(prepared.profile())
@@ -67,7 +73,7 @@ public final class SignatureAssembler {
                 }
             }
             case ENVELOPING -> {
-                Element object = target.getOwnerDocument().createElementNS(DS_NS, "ds:Object");
+                Element object = target.getOwnerDocument().createElementNS(DS_NS, qName("Object"));
                 String refUri = prepared.signedInfo().referenceUri();
                 if (refUri != null && refUri.startsWith("#")) {
                     object.setAttribute("Id", refUri.substring(1));
@@ -83,12 +89,12 @@ public final class SignatureAssembler {
 
     private Element buildKeyInfo(Document document, PreparedSignature prepared) {
         try {
-            Element keyInfo = document.createElementNS(DS_NS, "ds:KeyInfo");
-            Element x509Data = document.createElementNS(DS_NS, "ds:X509Data");
+            Element keyInfo = document.createElementNS(DS_NS, qName("KeyInfo"));
+            Element x509Data = document.createElementNS(DS_NS, qName("X509Data"));
             Element x509Certificate = textElement(
                 document,
                 DS_NS,
-                "ds:X509Certificate",
+                qName("X509Certificate"),
                 Base64.getEncoder().encodeToString(prepared.certificate().getEncoded())
             );
             x509Data.appendChild(x509Certificate);

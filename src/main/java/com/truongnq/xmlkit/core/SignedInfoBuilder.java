@@ -12,13 +12,20 @@ public final class SignedInfoBuilder {
     private final ReferenceBuilder referenceBuilder;
     private final CanonicalizationEngine canonicalizationEngine;
 
-    public SignedInfoBuilder(DigestEngine digestEngine) {
-        this(new ReferenceBuilder(digestEngine, new CanonicalizationEngine()), new CanonicalizationEngine());
+    private final String prefix;
+
+    public SignedInfoBuilder(DigestEngine digestEngine, String prefix) {
+        this(new ReferenceBuilder(digestEngine, new CanonicalizationEngine(), prefix), new CanonicalizationEngine(), prefix);
     }
 
-    public SignedInfoBuilder(ReferenceBuilder referenceBuilder, CanonicalizationEngine canonicalizationEngine) {
+    public SignedInfoBuilder(ReferenceBuilder referenceBuilder, CanonicalizationEngine canonicalizationEngine, String prefix) {
         this.referenceBuilder = referenceBuilder;
         this.canonicalizationEngine = canonicalizationEngine;
+        this.prefix = prefix;
+    }
+
+    private String qName(String localName) {
+        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
     }
 
     public SignedInfoData build(
@@ -59,34 +66,34 @@ public final class SignedInfoBuilder {
     }
 
     private Element buildSignedInfoElement(Document document, CanonicalizationMethod canonicalizationMethod, DigestAlgorithm digestAlgorithm, ReferenceData referenceData) {
-        Element root = document.createElementNS(DS_NS, "ds:SignedInfo");
-        Element canonicalization = document.createElementNS(DS_NS, "ds:CanonicalizationMethod");
+        Element root = document.createElementNS(DS_NS, qName("SignedInfo"));
+        Element canonicalization = document.createElementNS(DS_NS, qName("CanonicalizationMethod"));
         canonicalization.setAttribute("Algorithm", canonicalizationMethod.uri());
         root.appendChild(canonicalization);
 
-        Element signatureMethod = document.createElementNS(DS_NS, "ds:SignatureMethod");
+        Element signatureMethod = document.createElementNS(DS_NS, qName("SignatureMethod"));
         signatureMethod.setAttribute("Algorithm", digestAlgorithm.signatureMethodUri());
         root.appendChild(signatureMethod);
 
-        Element reference = document.createElementNS(DS_NS, "ds:Reference");
+        Element reference = document.createElementNS(DS_NS, qName("Reference"));
         reference.setAttribute("URI", referenceData.uri());
         root.appendChild(reference);
 
         if (!referenceData.transformUris().isEmpty()) {
-            Element transforms = document.createElementNS(DS_NS, "ds:Transforms");
+            Element transforms = document.createElementNS(DS_NS, qName("Transforms"));
             for (String transformUri : referenceData.transformUris()) {
-                Element transform = document.createElementNS(DS_NS, "ds:Transform");
+                Element transform = document.createElementNS(DS_NS, qName("Transform"));
                 transform.setAttribute("Algorithm", transformUri);
                 transforms.appendChild(transform);
             }
             reference.appendChild(transforms);
         }
 
-        Element digestMethod = document.createElementNS(DS_NS, "ds:DigestMethod");
+        Element digestMethod = document.createElementNS(DS_NS, qName("DigestMethod"));
         digestMethod.setAttribute("Algorithm", referenceData.digestMethodUri());
         reference.appendChild(digestMethod);
 
-        Element digestValue = document.createElementNS(DS_NS, "ds:DigestValue");
+        Element digestValue = document.createElementNS(DS_NS, qName("DigestValue"));
         digestValue.setTextContent(referenceData.digestValue());
         reference.appendChild(digestValue);
 
