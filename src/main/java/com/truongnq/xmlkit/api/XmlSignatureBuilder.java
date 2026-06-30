@@ -22,11 +22,11 @@ public final class XmlSignatureBuilder {
     private final PlacementResolver placementResolver = new PlacementResolver();
 
     private Document document;
-    private SignatureType signatureType = SignatureType.ENVELOPED;
+    private SignatureType signatureType = SignatureType.DETACHED;
     private SignatureProfile profile = SignatureProfile.XMLDSIG;
     private String prefix = "ds";
     private DigestAlgorithm digestAlgorithm = DigestAlgorithm.SHA256;
-    private CanonicalizationMethod canonicalizationMethod = CanonicalizationMethod.C14N_INCLUSIVE;
+    private CanonicalizationMethod canonicalizationMethod = CanonicalizationMethod.C14N_EXCLUSIVE;
     private X509Certificate certificate;
     private String placementXPath;
     private String targetXPath;
@@ -77,7 +77,8 @@ public final class XmlSignatureBuilder {
         return this;
     }
 
-    public XmlSignatureBuilder placementNamespaces(Map<String, String> placementNamespaces) {
+    public XmlSignatureBuilder placementXPath(String placementXPath, Map<String, String> placementNamespaces) {
+        this.placementXPath = placementXPath;
         this.placementNamespaces = Map.copyOf(placementNamespaces);
         return this;
     }
@@ -87,7 +88,8 @@ public final class XmlSignatureBuilder {
         return this;
     }
 
-    public XmlSignatureBuilder targetNamespaces(Map<String, String> targetNamespaces) {
+    public XmlSignatureBuilder targetXPath(String targetXPath, Map<String, String> targetNamespaces) {
+        this.targetXPath = targetXPath;
         this.targetNamespaces = Map.copyOf(targetNamespaces);
         return this;
     }
@@ -115,25 +117,23 @@ public final class XmlSignatureBuilder {
         var signedInfoBuilder = new SignedInfoBuilder(digestEngine, prefix);
         var signatureAssembler = new SignatureAssembler(digestEngine, prefix);
         var signedInfo = signedInfoBuilder.build(
-            workingDocument,
-            payloadNode,
-            signatureType,
-            digestAlgorithm,
-            canonicalizationMethod,
-            referenceId
-        );
+                workingDocument,
+                payloadNode,
+                signatureType,
+                digestAlgorithm,
+                canonicalizationMethod,
+                referenceId);
         byte[] digestToSign = digestEngine.digest(digestAlgorithm, signedInfo.canonicalizedBytes());
 
         PreparedSignature prepared = new PreparedSignature(
-            workingDocument,
-            placementTarget,
-            signatureType,
-            profile,
-            digestAlgorithm,
-            canonicalizationMethod,
-            certificate,
-            signedInfo
-        );
+                workingDocument,
+                placementTarget,
+                signatureType,
+                profile,
+                digestAlgorithm,
+                canonicalizationMethod,
+                certificate,
+                signedInfo);
 
         if (profile.requiresTimestamp()) {
             return new ExtendedSigningRequest(prepared, signatureAssembler, digestEngine, digestToSign);
@@ -149,8 +149,8 @@ public final class XmlSignatureBuilder {
 
     private Node resolvePayloadNode(Document workingDocument, Node placementTarget) {
         Node targetNode = targetXPath != null && !targetXPath.isBlank()
-            ? placementResolver.resolve(workingDocument, targetXPath, targetNamespaces)
-            : null;
+                ? placementResolver.resolve(workingDocument, targetXPath, targetNamespaces)
+                : null;
 
         if (targetNode != null) {
             validateTargetNode(targetNode);
