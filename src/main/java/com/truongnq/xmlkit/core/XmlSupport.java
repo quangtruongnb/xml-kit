@@ -32,6 +32,13 @@ public final class XmlSupport {
         return clone;
     }
 
+    public static Node detach(Node node) {
+        Document detachedDocument = newDocument();
+        Node detachedNode = detachedDocument.importNode(node, true);
+        detachedDocument.appendChild(detachedNode);
+        return detachedNode;
+    }
+
     public static byte[] canonicalize(Node node) {
         return toXml(node).getBytes(StandardCharsets.UTF_8);
     }
