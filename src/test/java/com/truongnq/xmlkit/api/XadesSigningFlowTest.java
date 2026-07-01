@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.truongnq.xmlkit.core.DigestEngine;
 import com.truongnq.xmlkit.exception.XmlKitException;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
+import com.truongnq.xmlkit.api.XPathLocation;
+import com.truongnq.xmlkit.api.XmlSignatureBuilder;
 import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
 import com.truongnq.xmlkit.testing.TestCertificates;
@@ -23,7 +25,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_T)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         PostSignatureRequest postSignature = request.completeSignature(new byte[] {9, 8, 7});
@@ -42,7 +44,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_T)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         assertThrows(XmlKitException.class, () -> request.completeTimestamp(new byte[] {7, 8, 9}));
@@ -55,7 +57,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_T)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         assertThrows(XmlKitException.class, () -> request.complete(new byte[] {9, 8, 7}));
@@ -68,7 +70,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_T)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         PostSignatureRequest postSignature = request.completeSignature(new byte[] {9, 8, 7});
@@ -84,7 +86,7 @@ class XadesSigningFlowTest {
             .profile(SignatureProfile.XADES_T)
             .certificate(TestCertificates.certificate())
             .digestAlgorithm(DigestAlgorithm.SHA384)
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         byte[] signatureValue = new byte[] {9, 8, 7};
@@ -102,7 +104,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_C)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         SignedDocument signed = request.completeSignature(new byte[] {9, 8, 7}).completeTimestamp(new byte[] {7, 8, 9});
@@ -119,7 +121,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_C)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         ValidationMaterial validationMaterial = ValidationMaterial.builder()
@@ -139,7 +141,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_C)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         ValidationMaterial validationMaterial = ValidationMaterial.builder()
@@ -159,7 +161,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_X_L)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         SignedDocument signed = request.completeSignature(new byte[] {9, 8, 7}).completeTimestamp(new byte[] {7, 8, 9});
@@ -176,7 +178,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_X_L)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         byte[] crlValue = new byte[] {4, 5, 6};
@@ -199,7 +201,7 @@ class XadesSigningFlowTest {
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XADES_X_L)
             .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
+            .placementXPath(XPathLocation.builder("//slot").build())
             .prepare();
 
         ValidationMaterial validationMaterial = ValidationMaterial.builder()

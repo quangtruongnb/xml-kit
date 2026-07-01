@@ -72,30 +72,20 @@ public final class XmlSignatureBuilder {
         return this;
     }
 
-    public XmlSignatureBuilder placementXPath(String placementXPath) {
-        this.placementXPath = placementXPath;
+    public XmlSignatureBuilder placementXPath(XPathLocation location) {
+        if (location != null) {
+            this.placementXPath = location.expression();
+            this.placementNamespaces = location.namespaces();
+        }
         return this;
     }
 
-    public XmlSignatureBuilder placementXPath(String placementXPath, Map<String, String> placementNamespaces) {
-        this.placementXPath = placementXPath;
-        this.placementNamespaces = Map.copyOf(placementNamespaces);
-        return this;
-    }
-
-    public XmlSignatureBuilder targetXPath(String targetXPath) {
-        this.targetXPath = targetXPath;
-        return this;
-    }
-
-    public XmlSignatureBuilder targetXPath(String targetXPath, Map<String, String> targetNamespaces) {
-        this.targetXPath = targetXPath;
-        this.targetNamespaces = Map.copyOf(targetNamespaces);
-        return this;
-    }
-
-    public XmlSignatureBuilder referenceId(String referenceId) {
-        this.referenceId = referenceId;
+    public XmlSignatureBuilder targetXPath(XPathLocation location) {
+        if (location != null) {
+            this.targetXPath = location.expression();
+            this.targetNamespaces = location.namespaces();
+            this.referenceId = location.referenceId();
+        }
         return this;
     }
 

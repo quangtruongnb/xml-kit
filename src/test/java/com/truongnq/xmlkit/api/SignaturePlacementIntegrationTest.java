@@ -99,7 +99,7 @@ class SignaturePlacementIntegrationTest {
             .signatureType(signatureType)
             .profile(SignatureProfile.XMLDSIG)
             .certificate(TestCertificates.certificate())
-            .placementXPath(placementXPath)
+            .placementXPath(XPathLocation.builder(placementXPath).build())
             .prepare()
             .complete(new byte[] {1, 2, 3});
     }

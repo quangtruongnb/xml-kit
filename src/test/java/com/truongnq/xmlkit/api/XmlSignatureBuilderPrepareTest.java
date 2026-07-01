@@ -20,15 +20,15 @@ class XmlSignatureBuilderPrepareTest {
         Document document = TestXml.document("<invoice><slot/></invoice>");
 
         SigningRequest request = XmlSignatureBuilder.forDocument(document)
-            .signatureType(SignatureType.ENVELOPED)
-            .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
-            .prepare();
+                .signatureType(SignatureType.ENVELOPED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .prepare();
 
         assertTrue(request.getDigestToSign().length > 0);
 
-        SignedDocument signed = request.complete(new byte[] {1, 2, 3});
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
 
         assertTrue(signed.xml().contains("Signature"));
         assertTrue(signed.xml().contains("SignatureValue"));
@@ -41,11 +41,11 @@ class XmlSignatureBuilderPrepareTest {
         Document document = TestXml.document("<invoice><slot/></invoice>");
 
         SigningRequest request = XmlSignatureBuilder.forDocument(document)
-            .signatureType(SignatureType.ENVELOPED)
-            .profile(SignatureProfile.XADES_T)
-            .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
-            .prepare();
+                .signatureType(SignatureType.ENVELOPED)
+                .profile(SignatureProfile.XADES_T)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .prepare();
 
         assertInstanceOf(ExtendedSigningRequest.class, request);
     }
@@ -55,13 +55,13 @@ class XmlSignatureBuilderPrepareTest {
         Document document = TestXml.document("<invoice><slot/></invoice>");
 
         SigningRequest request = XmlSignatureBuilder.forDocument(document)
-            .signatureType(SignatureType.DETACHED)
-            .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
-            .prepare();
+                .signatureType(SignatureType.DETACHED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .prepare();
 
-        SignedDocument signed = request.complete(new byte[] {1, 2, 3});
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
 
         assertFalse(signed.xml().contains("http://www.w3.org/2000/09/xmldsig#enveloped-signature"));
     }
@@ -71,14 +71,14 @@ class XmlSignatureBuilderPrepareTest {
         Document document = TestXml.document("<invoice><slot/></invoice>");
 
         SigningRequest request = XmlSignatureBuilder.forDocument(document)
-            .signatureType(SignatureType.ENVELOPED)
-            .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
-            .digestAlgorithm(DigestAlgorithm.SHA512)
-            .placementXPath("//slot")
-            .prepare();
+                .signatureType(SignatureType.ENVELOPED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .digestAlgorithm(DigestAlgorithm.SHA512)
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .prepare();
 
-        SignedDocument signed = request.complete(new byte[] {1, 2, 3});
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
 
         assertTrue(signed.xml().contains("http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"));
         assertTrue(signed.xml().contains(DigestAlgorithm.SHA512.uri()));
@@ -89,11 +89,11 @@ class XmlSignatureBuilderPrepareTest {
         Document document = TestXml.document("<invoice><slot>value</slot></invoice>");
 
         assertThrows(XmlKitException.class, () -> XmlSignatureBuilder.forDocument(document)
-            .signatureType(SignatureType.ENVELOPED)
-            .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
-            .placementXPath("//slot/text()")
-            .prepare());
+                .signatureType(SignatureType.ENVELOPED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot/text()").build())
+                .prepare());
     }
 
     @Test
@@ -101,14 +101,14 @@ class XmlSignatureBuilderPrepareTest {
         Document document = TestXml.document("<invoice><data>123</data><slot/></invoice>");
 
         SigningRequest request = XmlSignatureBuilder.forDocument(document)
-            .signatureType(SignatureType.DETACHED)
-            .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
-            .targetXPath("//data")
-            .prepare();
+                .signatureType(SignatureType.DETACHED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .targetXPath(XPathLocation.builder("//data").build())
+                .prepare();
 
-        SignedDocument signed = request.complete(new byte[] {1, 2, 3});
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
 
         assertTrue(signed.xml().matches("(?s).*<data Id=\"id-.*\">123</data>.*"));
         assertTrue(signed.xml().contains("URI=\"#id-"));
@@ -119,15 +119,14 @@ class XmlSignatureBuilderPrepareTest {
         Document document = TestXml.document("<invoice><data>123</data><slot/></invoice>");
 
         SigningRequest request = XmlSignatureBuilder.forDocument(document)
-            .signatureType(SignatureType.DETACHED)
-            .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
-            .placementXPath("//slot")
-            .targetXPath("//data")
-            .referenceId("custom-client-id")
-            .prepare();
+                .signatureType(SignatureType.DETACHED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .targetXPath(XPathLocation.builder("//data").referenceId("custom-client-id").build())
+                .prepare();
 
-        SignedDocument signed = request.complete(new byte[] {1, 2, 3});
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
 
         assertTrue(signed.xml().contains("<data Id=\"custom-client-id\">123</data>"));
         assertTrue(signed.xml().contains("URI=\"#custom-client-id\""));
