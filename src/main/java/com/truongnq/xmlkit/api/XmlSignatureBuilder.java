@@ -1,7 +1,9 @@
 package com.truongnq.xmlkit.api;
 
+import com.truongnq.xmlkit.core.CanonicalizationEngine;
 import com.truongnq.xmlkit.core.DigestEngine;
 import com.truongnq.xmlkit.core.PlacementResolver;
+import com.truongnq.xmlkit.core.ReferenceData;
 import com.truongnq.xmlkit.core.SignatureAssembler;
 import com.truongnq.xmlkit.core.SignedInfoBuilder;
 import com.truongnq.xmlkit.core.XmlSupport;
@@ -14,15 +16,16 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 public final class XmlSignatureBuilder {
+    private static final String DS_NS = "http://www.w3.org/2000/09/xmldsig#";
     private static final String ENVELOPED_SIGNATURE_TRANSFORM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
 
     private final DigestEngine digestEngine = new DigestEngine();
+    private final CanonicalizationEngine canonicalizationEngine = new CanonicalizationEngine();
     private final PlacementResolver placementResolver = new PlacementResolver();
 
     private Document document;
@@ -34,6 +37,8 @@ public final class XmlSignatureBuilder {
     private X509Certificate certificate;
     private Selector placementSelector;
     private List<TargetReference> targets = List.of();
+    private String signatureId;
+    private List<SignatureObject> signatureObjects = List.of();
 
     private XmlSignatureBuilder(Document document) {
         this.document = document;
@@ -96,6 +101,20 @@ public final class XmlSignatureBuilder {
         return this;
     }
 
+    public XmlSignatureBuilder signatureId(String signatureId) {
+        this.signatureId = signatureId;
+        return this;
+    }
+
+    public XmlSignatureBuilder addSignatureObject(SignatureObject signatureObject) {
+        if (signatureObject != null) {
+            List<SignatureObject> updated = new ArrayList<>(signatureObjects);
+            updated.add(signatureObject);
+            this.signatureObjects = List.copyOf(updated);
+        }
+        return this;
+    }
+
     public SigningRequest prepare() {
         if (document == null) {
             throw new XmlKitException("Document is required.");
@@ -118,6 +137,9 @@ public final class XmlSignatureBuilder {
         List<Node> payloadTargets = resolvePayloadTargets(workingDocument, placementTarget);
         List<String> referenceIds = referenceIdsFor(payloadTargets);
         List<List<String>> referenceTransformUris = referenceTransformUrisFor(payloadTargets);
+        String resolvedSignatureId = resolveSignatureId();
+        List<SignatureObject> resolvedObjects = resolveSignatureObjects();
+        List<ReferenceData> additionalReferences = buildAdditionalReferences(resolvedObjects, resolvedSignatureId);
         var signedInfoBuilder = new SignedInfoBuilder(digestEngine, prefix);
         var signatureAssembler = new SignatureAssembler(digestEngine, prefix);
         var signedInfo = signedInfoBuilder.build(
@@ -127,7 +149,8 @@ public final class XmlSignatureBuilder {
                 digestAlgorithm,
                 canonicalizationMethod,
                 referenceIds,
-                referenceTransformUris);
+                referenceTransformUris,
+                additionalReferences);
         byte[] digestToSign = digestEngine.digest(digestAlgorithm, signedInfo.canonicalizedBytes());
 
         PreparedSignature prepared = new PreparedSignature(
@@ -139,7 +162,9 @@ public final class XmlSignatureBuilder {
                 digestAlgorithm,
                 canonicalizationMethod,
                 certificate,
-                signedInfo);
+                signedInfo,
+                resolvedSignatureId,
+                resolvedObjects);
 
         if (profile.requiresTimestamp()) {
             return new ExtendedSigningRequest(prepared, signatureAssembler, digestEngine, digestToSign);
@@ -242,5 +267,81 @@ public final class XmlSignatureBuilder {
             throw new XmlKitException(
                     "Enveloped signatures must include the enveloped-signature transform when custom transforms are provided.");
         }
+    }
+
+    private String qName(String localName) {
+        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
+    }
+
+    private String resolveSignatureId() {
+        if (signatureId != null) {
+            return signatureId;
+        }
+        boolean hasProperties = signatureObjects.stream().anyMatch(SignatureObject::isProperties);
+        return hasProperties ? "id-" + java.util.UUID.randomUUID().toString() : null;
+    }
+
+    private List<SignatureObject> resolveSignatureObjects() {
+        List<SignatureObject> resolved = new ArrayList<>(signatureObjects.size());
+        for (SignatureObject obj : signatureObjects) {
+            String objId = obj.id();
+            if (objId == null && obj.includeInSignedInfo()) {
+                objId = "id-" + java.util.UUID.randomUUID().toString();
+            }
+            resolved.add(new SignatureObject(
+                    obj.content(), obj.properties(), objId,
+                    obj.includeInSignedInfo(), obj.transformUris()));
+        }
+        return List.copyOf(resolved);
+    }
+
+    private List<ReferenceData> buildAdditionalReferences(List<SignatureObject> resolvedObjects, String resolvedSignatureId) {
+        List<ReferenceData> additionalReferences = new ArrayList<>();
+        for (SignatureObject obj : resolvedObjects) {
+            if (!obj.includeInSignedInfo()) {
+                continue;
+            }
+            Element tempObject = buildTemporaryObjectElement(obj, resolvedSignatureId);
+            byte[] canonicalized = canonicalizationEngine.canonicalize(tempObject, canonicalizationMethod);
+            String digest = digestEngine.digestBase64(digestAlgorithm, canonicalized);
+            List<String> transforms = obj.transformUris() != null ? obj.transformUris() : List.of();
+            additionalReferences.add(new ReferenceData(
+                    "#" + obj.id(), digestAlgorithm.uri(), digest, transforms));
+        }
+        return additionalReferences;
+    }
+
+    private Element buildTemporaryObjectElement(SignatureObject obj, String resolvedSignatureId) {
+        Document tempDoc = XmlSupport.newDocument();
+        Element signature = tempDoc.createElementNS(DS_NS, qName("Signature"));
+        String xmlnsAttr = prefix != null && !prefix.isEmpty() ? "xmlns:" + prefix : "xmlns";
+        signature.setAttribute(xmlnsAttr, DS_NS);
+        tempDoc.appendChild(signature);
+        Element object = tempDoc.createElementNS(DS_NS, qName("Object"));
+        if (obj.id() != null) {
+            object.setAttribute("Id", obj.id());
+        }
+        if (obj.isProperties()) {
+            buildSignaturePropertiesContent(tempDoc, object, obj, resolvedSignatureId);
+        } else {
+            object.appendChild(tempDoc.importNode(obj.content(), true));
+        }
+        signature.appendChild(object);
+        return object;
+    }
+
+    private void buildSignaturePropertiesContent(Document doc, Element object, SignatureObject obj, String resolvedSignatureId) {
+        String targetUri = resolvedSignatureId != null ? "#" + resolvedSignatureId : "";
+        Element sigProperties = doc.createElementNS(DS_NS, qName("SignatureProperties"));
+        for (SignatureProperty prop : obj.properties()) {
+            Element sigProperty = doc.createElementNS(DS_NS, qName("SignatureProperty"));
+            if (prop.id() != null) {
+                sigProperty.setAttribute("Id", prop.id());
+            }
+            sigProperty.setAttribute("Target", targetUri);
+            sigProperty.appendChild(doc.importNode(prop.content(), true));
+            sigProperties.appendChild(sigProperty);
+        }
+        object.appendChild(sigProperties);
     }
 }

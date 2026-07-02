@@ -1,6 +1,8 @@
 package com.truongnq.xmlkit.core;
 
 import com.truongnq.xmlkit.api.PreparedSignature;
+import com.truongnq.xmlkit.api.SignatureObject;
+import com.truongnq.xmlkit.api.SignatureProperty;
 import com.truongnq.xmlkit.api.SignedDocument;
 import com.truongnq.xmlkit.api.ValidationMaterial;
 import com.truongnq.xmlkit.exception.SignatureAssemblyException;
@@ -45,6 +47,9 @@ public final class SignatureAssembler {
     ) {
         Document document = prepared.document();
         Element signature = document.createElementNS(DS_NS, qName("Signature"));
+        if (prepared.signatureId() != null) {
+            signature.setAttribute("Id", prepared.signatureId());
+        }
         signature.appendChild(prepared.signedInfo().element());
         signature.appendChild(textElement(document, DS_NS, qName("SignatureValue"), digestEngine.base64(signatureValue)));
         signature.appendChild(buildKeyInfo(document, prepared));
@@ -54,6 +59,7 @@ public final class SignatureAssembler {
         if (profileObject != null) {
             signature.appendChild(profileObject);
         }
+        appendSignatureObjects(prepared, signature, document);
         placeSignature(prepared, signature);
         return new SignedDocument(document);
     }
@@ -118,5 +124,34 @@ public final class SignatureAssembler {
         Element element = document.createElementNS(namespace, qualifiedName);
         element.setTextContent(value);
         return element;
+    }
+
+    private void appendSignatureObjects(PreparedSignature prepared, Element signature, Document document) {
+        if (prepared.signatureObjects() == null) {
+            return;
+        }
+        String targetUri = prepared.signatureId() != null ? "#" + prepared.signatureId() : "";
+        for (SignatureObject obj : prepared.signatureObjects()) {
+            Element object = document.createElementNS(DS_NS, qName("Object"));
+            if (obj.id() != null) {
+                object.setAttribute("Id", obj.id());
+            }
+            if (obj.isProperties()) {
+                Element sigProperties = document.createElementNS(DS_NS, qName("SignatureProperties"));
+                for (SignatureProperty prop : obj.properties()) {
+                    Element sigProperty = document.createElementNS(DS_NS, qName("SignatureProperty"));
+                    if (prop.id() != null) {
+                        sigProperty.setAttribute("Id", prop.id());
+                    }
+                    sigProperty.setAttribute("Target", targetUri);
+                    sigProperty.appendChild(document.importNode(prop.content(), true));
+                    sigProperties.appendChild(sigProperty);
+                }
+                object.appendChild(sigProperties);
+            } else {
+                object.appendChild(document.importNode(obj.content(), true));
+            }
+            signature.appendChild(object);
+        }
     }
 }

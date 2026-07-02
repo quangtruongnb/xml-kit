@@ -19,6 +19,8 @@ public record PreparedSignature(
     DigestAlgorithm digestAlgorithm,
     CanonicalizationMethod canonicalizationMethod,
     X509Certificate certificate,
-    SignedInfoData signedInfo
+    SignedInfoData signedInfo,
+    String signatureId,
+    List<SignatureObject> signatureObjects
 ) {
 }
