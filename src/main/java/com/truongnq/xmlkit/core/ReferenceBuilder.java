@@ -32,7 +32,8 @@ public class ReferenceBuilder {
         SignatureType signatureType,
         DigestAlgorithm digestAlgorithm,
         CanonicalizationMethod canonicalizationMethod,
-        String clientReferenceId
+        String clientReferenceId,
+        List<String> customTransformUris
     ) {
         String referenceUri;
         Node resolvedPayloadNode;
@@ -60,7 +61,7 @@ public class ReferenceBuilder {
             digestAlgorithm,
             canonicalizationEngine.canonicalize(resolvedPayloadNode, canonicalizationMethod)
         );
-        return new ReferenceData(referenceUri, digestAlgorithm.uri(), referenceDigest, transformsFor(signatureType));
+        return new ReferenceData(referenceUri, digestAlgorithm.uri(), referenceDigest, transformsFor(signatureType, customTransformUris));
     }
 
     private Node buildEnvelopingObjectNode(Document document, Node payloadNode, String objectId) {
@@ -77,7 +78,10 @@ public class ReferenceBuilder {
         return object;
     }
 
-    private List<String> transformsFor(SignatureType signatureType) {
+    private List<String> transformsFor(SignatureType signatureType, List<String> customTransformUris) {
+        if (customTransformUris != null) {
+            return List.copyOf(customTransformUris);
+        }
         if (signatureType == ENVELOPED) {
             return List.of("http://www.w3.org/2000/09/xmldsig#enveloped-signature");
         }

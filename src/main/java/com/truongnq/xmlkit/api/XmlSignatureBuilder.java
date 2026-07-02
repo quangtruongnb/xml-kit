@@ -20,6 +20,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 public final class XmlSignatureBuilder {
+    private static final String ENVELOPED_SIGNATURE_TRANSFORM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
+
     private final DigestEngine digestEngine = new DigestEngine();
     private final PlacementResolver placementResolver = new PlacementResolver();
 
@@ -30,6 +32,7 @@ public final class XmlSignatureBuilder {
     private DigestAlgorithm digestAlgorithm = DigestAlgorithm.SHA256;
     private CanonicalizationMethod canonicalizationMethod = CanonicalizationMethod.C14N_EXCLUSIVE;
     private X509Certificate certificate;
+    private XPathLocation placementLocation;
     private String placementXPath;
     private Map<String, String> placementNamespaces = Map.of();
     private List<XPathLocation> targetXPaths = List.of();
@@ -74,6 +77,7 @@ public final class XmlSignatureBuilder {
 
     public XmlSignatureBuilder placementXPath(XPathLocation location) {
         if (location != null) {
+            this.placementLocation = location;
             this.placementXPath = location.expression();
             this.placementNamespaces = location.namespaces();
         }
@@ -110,6 +114,7 @@ public final class XmlSignatureBuilder {
         validatePlacementTarget(placementTarget);
         List<Node> payloadTargets = resolvePayloadTargets(workingDocument, placementTarget);
         List<String> referenceIds = referenceIdsFor(payloadTargets);
+        List<List<String>> referenceTransformUris = referenceTransformUrisFor(payloadTargets);
         var signedInfoBuilder = new SignedInfoBuilder(digestEngine, prefix);
         var signatureAssembler = new SignatureAssembler(digestEngine, prefix);
         var signedInfo = signedInfoBuilder.build(
@@ -118,7 +123,8 @@ public final class XmlSignatureBuilder {
                 signatureType,
                 digestAlgorithm,
                 canonicalizationMethod,
-                referenceIds);
+                referenceIds,
+                referenceTransformUris);
         byte[] digestToSign = digestEngine.digest(digestAlgorithm, signedInfo.canonicalizedBytes());
 
         PreparedSignature prepared = new PreparedSignature(
@@ -207,5 +213,32 @@ public final class XmlSignatureBuilder {
                     configuredReferenceId != null ? configuredReferenceId : referenceIdFor(payloadTargets.get(index)));
         }
         return referenceIds;
+    }
+
+    private List<List<String>> referenceTransformUrisFor(List<Node> payloadTargets) {
+        List<List<String>> referenceTransformUris = new ArrayList<>(payloadTargets.size());
+        for (int index = 0; index < payloadTargets.size(); index++) {
+            XPathLocation location = configuredLocationFor(index);
+            List<String> transformUris = location != null ? location.transformUris() : null;
+            validateConfiguredTransforms(transformUris);
+            referenceTransformUris.add(transformUris);
+        }
+        return referenceTransformUris;
+    }
+
+    private XPathLocation configuredLocationFor(int index) {
+        if (!targetXPaths.isEmpty()) {
+            return index < targetXPaths.size() ? targetXPaths.get(index) : null;
+        }
+        return placementLocation;
+    }
+
+    private void validateConfiguredTransforms(List<String> transformUris) {
+        if (signatureType == SignatureType.ENVELOPED
+                && transformUris != null
+                && !transformUris.contains(ENVELOPED_SIGNATURE_TRANSFORM)) {
+            throw new XmlKitException(
+                    "Enveloped signatures must include the enveloped-signature transform when custom transforms are provided.");
+        }
     }
 }

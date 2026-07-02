@@ -102,6 +102,7 @@ class ProfileLayerTest {
                 SignatureType.ENVELOPED,
                 DigestAlgorithm.SHA256,
                 CanonicalizationMethod.C14N_INCLUSIVE,
+                Collections.singletonList(null),
                 Collections.singletonList(null)
             )
         );

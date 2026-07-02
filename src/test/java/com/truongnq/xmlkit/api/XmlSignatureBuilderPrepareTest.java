@@ -1,8 +1,9 @@
 package com.truongnq.xmlkit.api;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.truongnq.xmlkit.exception.XmlKitException;
@@ -65,6 +66,66 @@ class XmlSignatureBuilderPrepareTest {
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
 
         assertFalse(signed.xml().contains("http://www.w3.org/2000/09/xmldsig#enveloped-signature"));
+    }
+
+    @Test
+    void detachedReferenceUsesCallerProvidedTransforms() {
+        Document document = TestXml.document("<invoice><data>123</data><slot/></invoice>");
+
+        SigningRequest request = XmlSignatureBuilder.forDocument(document)
+                .signatureType(SignatureType.DETACHED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .targetXPaths(List.of(
+                        XPathLocation.builder("//data")
+                                .transformUris(List.of(
+                                        "http://www.w3.org/TR/1999/REC-xpath-19991116",
+                                        "http://www.w3.org/2001/10/xml-exc-c14n#"))
+                                .build()))
+                .prepare();
+
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
+
+        assertTrue(signed.xml().contains("http://www.w3.org/TR/1999/REC-xpath-19991116"));
+        assertTrue(signed.xml().contains("http://www.w3.org/2001/10/xml-exc-c14n#"));
+    }
+
+    @Test
+    void envelopedReferenceUsesCallerProvidedTransformsWithoutAddingDefaults() {
+        Document document = TestXml.document("<invoice><slot/></invoice>");
+
+        SigningRequest request = XmlSignatureBuilder.forDocument(document)
+                .signatureType(SignatureType.ENVELOPED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot")
+                        .transformUris(List.of(
+                                "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
+                                "http://www.w3.org/2001/10/xml-exc-c14n#"))
+                        .build())
+                .prepare();
+
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
+
+        assertTrue(signed.xml().contains("http://www.w3.org/2000/09/xmldsig#enveloped-signature"));
+        assertTrue(signed.xml().contains("http://www.w3.org/2001/10/xml-exc-c14n#"));
+        assertEquals(1, countOccurrences(signed.xml(), "http://www.w3.org/2000/09/xmldsig#enveloped-signature"));
+        assertEquals(2, countOccurrences(signed.xml(), "<ds:Transform Algorithm="));
+    }
+
+    @Test
+    void prepareRejectsEnvelopedTransformsWithoutEnvelopedSignatureTransform() {
+        Document document = TestXml.document("<invoice><slot/></invoice>");
+
+        assertThrows(XmlKitException.class, () -> XmlSignatureBuilder.forDocument(document)
+                .signatureType(SignatureType.ENVELOPED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot")
+                        .transformUris(List.of("http://www.w3.org/2001/10/xml-exc-c14n#"))
+                        .build())
+                .prepare());
     }
 
     @Test
@@ -200,5 +261,9 @@ class XmlSignatureBuilderPrepareTest {
                         XPathLocation.builder("//data").build(),
                         XPathLocation.builder("//meta").build()))
                 .prepare());
+    }
+
+    private int countOccurrences(String text, String needle) {
+        return text.split(java.util.regex.Pattern.quote(needle), -1).length - 1;
     }
 }

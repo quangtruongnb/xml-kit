@@ -36,7 +36,8 @@ public final class SignedInfoBuilder {
         SignatureType signatureType,
         DigestAlgorithm digestAlgorithm,
         CanonicalizationMethod canonicalizationMethod,
-        List<String> referenceIds
+        List<String> referenceIds,
+        List<List<String>> referenceTransformUris
     ) {
         List<ReferenceData> references = new ArrayList<>();
         for (int index = 0; index < payloadNodes.size(); index++) {
@@ -46,7 +47,8 @@ public final class SignedInfoBuilder {
                 signatureType,
                 digestAlgorithm,
                 canonicalizationMethod,
-                referenceIds.get(index)
+                referenceIds.get(index),
+                referenceTransformUris.get(index)
             ));
         }
 

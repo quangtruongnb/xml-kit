@@ -76,6 +76,7 @@ class CoreLayerTest {
             SignatureType.DETACHED,
             DigestAlgorithm.SHA256,
             CanonicalizationMethod.C14N_INCLUSIVE,
+            null,
             null
         );
 
@@ -97,6 +98,7 @@ class CoreLayerTest {
             SignatureType.DETACHED,
             DigestAlgorithm.SHA256,
             CanonicalizationMethod.C14N_INCLUSIVE,
+            null,
             null
         );
 
@@ -126,7 +128,8 @@ class CoreLayerTest {
                     SignatureType ignoredSignatureType,
                     DigestAlgorithm ignoredDigestAlgorithm,
                     CanonicalizationMethod ignoredCanonicalizationMethod,
-                    String ignoredClientReferenceId
+                    String ignoredClientReferenceId,
+                    List<String> ignoredCustomTransformUris
                 ) {
                     return fixedReference;
                 }
@@ -141,6 +144,7 @@ class CoreLayerTest {
             SignatureType.ENVELOPED,
             DigestAlgorithm.SHA256,
             CanonicalizationMethod.C14N_INCLUSIVE,
+            Collections.singletonList(null),
             Collections.singletonList(null)
         );
 
