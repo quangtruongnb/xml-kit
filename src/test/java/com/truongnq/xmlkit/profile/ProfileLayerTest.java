@@ -16,6 +16,8 @@ import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
 import com.truongnq.xmlkit.testing.TestCertificates;
 import com.truongnq.xmlkit.testing.TestXml;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -88,6 +90,7 @@ class ProfileLayerTest {
         return new PreparedSignature(
             document,
             document.getDocumentElement(),
+            List.of(document.getDocumentElement()),
             SignatureType.ENVELOPED,
             profile,
             DigestAlgorithm.SHA256,
@@ -95,11 +98,11 @@ class ProfileLayerTest {
             TestCertificates.certificate(),
             signedInfoBuilder.build(
                 document,
-                document.getDocumentElement(),
+                List.of(document.getDocumentElement()),
                 SignatureType.ENVELOPED,
                 DigestAlgorithm.SHA256,
                 CanonicalizationMethod.C14N_INCLUSIVE,
-                null
+                Collections.singletonList(null)
             )
         );
     }

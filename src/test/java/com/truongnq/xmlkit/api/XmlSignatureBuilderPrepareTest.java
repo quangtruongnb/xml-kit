@@ -11,6 +11,7 @@ import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
 import com.truongnq.xmlkit.testing.TestCertificates;
 import com.truongnq.xmlkit.testing.TestXml;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 
@@ -105,7 +106,7 @@ class XmlSignatureBuilderPrepareTest {
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
                 .placementXPath(XPathLocation.builder("//slot").build())
-                .targetXPath(XPathLocation.builder("//data").build())
+                .targetXPaths(List.of(XPathLocation.builder("//data").build()))
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -123,12 +124,81 @@ class XmlSignatureBuilderPrepareTest {
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
                 .placementXPath(XPathLocation.builder("//slot").build())
-                .targetXPath(XPathLocation.builder("//data").referenceId("custom-client-id").build())
+                .targetXPaths(List.of(XPathLocation.builder("//data").referenceId("custom-client-id").build()))
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
 
         assertTrue(signed.xml().contains("<data Id=\"custom-client-id\">123</data>"));
         assertTrue(signed.xml().contains("URI=\"#custom-client-id\""));
+    }
+
+    @Test
+    void prepareBuildsOneDetachedReferencePerConfiguredTarget() {
+        Document document = TestXml.document("<invoice><data>123</data><meta>abc</meta><slot/></invoice>");
+
+        SigningRequest request = XmlSignatureBuilder.forDocument(document)
+                .signatureType(SignatureType.DETACHED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .targetXPaths(List.of(
+                        XPathLocation.builder("//data").referenceId("data-ref").build(),
+                        XPathLocation.builder("//meta").referenceId("meta-ref").build()))
+                .prepare();
+
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
+
+        assertTrue(signed.xml().contains("URI=\"#data-ref\""));
+        assertTrue(signed.xml().contains("URI=\"#meta-ref\""));
+    }
+
+    @Test
+    void addTargetXPathAppendsTargetToReferenceList() {
+        Document document = TestXml.document("<invoice><data>123</data><meta>abc</meta><slot/></invoice>");
+
+        SigningRequest request = XmlSignatureBuilder.forDocument(document)
+                .signatureType(SignatureType.DETACHED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .addTargetXPath(XPathLocation.builder("//data").referenceId("data-ref").build())
+                .addTargetXPath(XPathLocation.builder("//meta").referenceId("meta-ref").build())
+                .prepare();
+
+        SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
+
+        assertTrue(signed.xml().contains("URI=\"#data-ref\""));
+        assertTrue(signed.xml().contains("URI=\"#meta-ref\""));
+    }
+
+    @Test
+    void prepareRejectsDuplicateResolvedTargets() {
+        Document document = TestXml.document("<invoice><data>123</data><slot/></invoice>");
+
+        assertThrows(XmlKitException.class, () -> XmlSignatureBuilder.forDocument(document)
+                .signatureType(SignatureType.DETACHED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .targetXPaths(List.of(
+                        XPathLocation.builder("//data").build(),
+                        XPathLocation.builder("/invoice/data").build()))
+                .prepare());
+    }
+
+    @Test
+    void prepareRejectsMultipleTargetsForEnvelopedSignature() {
+        Document document = TestXml.document("<invoice><data>123</data><meta>abc</meta><slot/></invoice>");
+
+        assertThrows(XmlKitException.class, () -> XmlSignatureBuilder.forDocument(document)
+                .signatureType(SignatureType.ENVELOPED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .placementXPath(XPathLocation.builder("//slot").build())
+                .targetXPaths(List.of(
+                        XPathLocation.builder("//data").build(),
+                        XPathLocation.builder("//meta").build()))
+                .prepare());
     }
 }

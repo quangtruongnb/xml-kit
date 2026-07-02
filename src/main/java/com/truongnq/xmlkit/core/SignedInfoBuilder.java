@@ -3,6 +3,8 @@ package com.truongnq.xmlkit.core;
 import com.truongnq.xmlkit.model.CanonicalizationMethod;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureType;
+import java.util.ArrayList;
+import java.util.List;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -30,42 +32,47 @@ public final class SignedInfoBuilder {
 
     public SignedInfoData build(
         Document document,
-        Node payloadNode,
+        List<Node> payloadNodes,
         SignatureType signatureType,
         DigestAlgorithm digestAlgorithm,
         CanonicalizationMethod canonicalizationMethod,
-        String referenceId
+        List<String> referenceIds
     ) {
-        ReferenceData referenceData = referenceBuilder.build(
-            document,
-            payloadNode,
-            signatureType,
-            digestAlgorithm,
-            canonicalizationMethod,
-            referenceId
-        );
+        List<ReferenceData> references = new ArrayList<>();
+        for (int index = 0; index < payloadNodes.size(); index++) {
+            references.add(referenceBuilder.build(
+                document,
+                payloadNodes.get(index),
+                signatureType,
+                digestAlgorithm,
+                canonicalizationMethod,
+                referenceIds.get(index)
+            ));
+        }
 
         Element signedInfoElement = buildSignedInfoElement(
             document,
             canonicalizationMethod,
             digestAlgorithm,
-            referenceData
+            references
         );
         byte[] canonicalizedBytes = canonicalizationEngine.canonicalize(signedInfoElement, canonicalizationMethod);
 
         return new SignedInfoData(
-            referenceData.uri(),
-            referenceData.digestValue(),
+            List.copyOf(references),
             canonicalizationMethod.uri(),
-            referenceData.digestMethodUri(),
             digestAlgorithm.signatureMethodUri(),
-            referenceData.transformUris(),
             signedInfoElement,
             canonicalizedBytes
         );
     }
 
-    private Element buildSignedInfoElement(Document document, CanonicalizationMethod canonicalizationMethod, DigestAlgorithm digestAlgorithm, ReferenceData referenceData) {
+    private Element buildSignedInfoElement(
+        Document document,
+        CanonicalizationMethod canonicalizationMethod,
+        DigestAlgorithm digestAlgorithm,
+        List<ReferenceData> references
+    ) {
         Element root = document.createElementNS(DS_NS, qName("SignedInfo"));
         Element canonicalization = document.createElementNS(DS_NS, qName("CanonicalizationMethod"));
         canonicalization.setAttribute("Algorithm", canonicalizationMethod.uri());
@@ -75,27 +82,29 @@ public final class SignedInfoBuilder {
         signatureMethod.setAttribute("Algorithm", digestAlgorithm.signatureMethodUri());
         root.appendChild(signatureMethod);
 
-        Element reference = document.createElementNS(DS_NS, qName("Reference"));
-        reference.setAttribute("URI", referenceData.uri());
-        root.appendChild(reference);
+        for (ReferenceData referenceData : references) {
+            Element reference = document.createElementNS(DS_NS, qName("Reference"));
+            reference.setAttribute("URI", referenceData.uri());
+            root.appendChild(reference);
 
-        if (!referenceData.transformUris().isEmpty()) {
-            Element transforms = document.createElementNS(DS_NS, qName("Transforms"));
-            for (String transformUri : referenceData.transformUris()) {
-                Element transform = document.createElementNS(DS_NS, qName("Transform"));
-                transform.setAttribute("Algorithm", transformUri);
-                transforms.appendChild(transform);
+            if (!referenceData.transformUris().isEmpty()) {
+                Element transforms = document.createElementNS(DS_NS, qName("Transforms"));
+                for (String transformUri : referenceData.transformUris()) {
+                    Element transform = document.createElementNS(DS_NS, qName("Transform"));
+                    transform.setAttribute("Algorithm", transformUri);
+                    transforms.appendChild(transform);
+                }
+                reference.appendChild(transforms);
             }
-            reference.appendChild(transforms);
+
+            Element digestMethod = document.createElementNS(DS_NS, qName("DigestMethod"));
+            digestMethod.setAttribute("Algorithm", referenceData.digestMethodUri());
+            reference.appendChild(digestMethod);
+
+            Element digestValue = document.createElementNS(DS_NS, qName("DigestValue"));
+            digestValue.setTextContent(referenceData.digestValue());
+            reference.appendChild(digestValue);
         }
-
-        Element digestMethod = document.createElementNS(DS_NS, qName("DigestMethod"));
-        digestMethod.setAttribute("Algorithm", referenceData.digestMethodUri());
-        reference.appendChild(digestMethod);
-
-        Element digestValue = document.createElementNS(DS_NS, qName("DigestValue"));
-        digestValue.setTextContent(referenceData.digestValue());
-        reference.appendChild(digestValue);
 
         return root;
     }

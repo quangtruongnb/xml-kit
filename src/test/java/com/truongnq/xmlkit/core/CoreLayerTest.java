@@ -10,6 +10,8 @@ import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureType;
 import com.truongnq.xmlkit.testing.TestXml;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -135,15 +137,15 @@ class CoreLayerTest {
 
         SignedInfoData signedInfo = builder.build(
             document,
-            document.getDocumentElement(),
+            List.of(document.getDocumentElement()),
             SignatureType.ENVELOPED,
             DigestAlgorithm.SHA256,
             CanonicalizationMethod.C14N_INCLUSIVE,
-            null
+            Collections.singletonList(null)
         );
 
-        assertEquals("custom-uri", signedInfo.referenceUri());
-        assertEquals("custom-digest-method", signedInfo.digestMethodUri());
-        assertEquals("custom-digest-value", signedInfo.referenceDigestValue());
+        assertEquals("custom-uri", signedInfo.references().getFirst().uri());
+        assertEquals("custom-digest-method", signedInfo.references().getFirst().digestMethodUri());
+        assertEquals("custom-digest-value", signedInfo.references().getFirst().digestValue());
     }
 }

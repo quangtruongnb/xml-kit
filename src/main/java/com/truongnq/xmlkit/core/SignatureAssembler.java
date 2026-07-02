@@ -7,6 +7,7 @@ import com.truongnq.xmlkit.exception.SignatureAssemblyException;
 import com.truongnq.xmlkit.model.SignatureType;
 import com.truongnq.xmlkit.profile.ProfileObjectBuilderFactory;
 import java.util.Base64;
+import java.util.List;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -73,17 +74,25 @@ public final class SignatureAssembler {
                 }
             }
             case ENVELOPING -> {
-                Element object = target.getOwnerDocument().createElementNS(DS_NS, qName("Object"));
-                String refUri = prepared.signedInfo().referenceUri();
-                if (refUri != null && refUri.startsWith("#")) {
-                    object.setAttribute("Id", refUri.substring(1));
-                } else {
-                    object.setAttribute("Id", "id-" + java.util.UUID.randomUUID().toString());
-                }
-                object.appendChild(target.getOwnerDocument().importNode(prepared.document().getDocumentElement(), true));
-                signature.appendChild(object);
+                appendEnvelopingObjects(prepared, signature, target.getOwnerDocument());
                 target.appendChild(signature);
             }
+        }
+    }
+
+    private void appendEnvelopingObjects(PreparedSignature prepared, Element signature, Document document) {
+        List<Node> payloadTargets = prepared.payloadTargets();
+        List<ReferenceData> references = prepared.signedInfo().references();
+        for (int index = 0; index < payloadTargets.size(); index++) {
+            Element object = document.createElementNS(DS_NS, qName("Object"));
+            String refUri = references.get(index).uri();
+            if (refUri != null && refUri.startsWith("#")) {
+                object.setAttribute("Id", refUri.substring(1));
+            } else {
+                object.setAttribute("Id", "id-" + java.util.UUID.randomUUID().toString());
+            }
+            object.appendChild(document.importNode(payloadTargets.get(index), true));
+            signature.appendChild(object);
         }
     }
 

@@ -2,7 +2,6 @@ package com.truongnq.xmlkit.api;
 
 import com.truongnq.xmlkit.core.DigestEngine;
 import com.truongnq.xmlkit.core.PlacementResolver;
-import com.truongnq.xmlkit.core.ReferenceBuilder;
 import com.truongnq.xmlkit.core.SignatureAssembler;
 import com.truongnq.xmlkit.core.SignedInfoBuilder;
 import com.truongnq.xmlkit.core.XmlSupport;
@@ -12,6 +11,9 @@ import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -29,10 +31,8 @@ public final class XmlSignatureBuilder {
     private CanonicalizationMethod canonicalizationMethod = CanonicalizationMethod.C14N_EXCLUSIVE;
     private X509Certificate certificate;
     private String placementXPath;
-    private String targetXPath;
     private Map<String, String> placementNamespaces = Map.of();
-    private Map<String, String> targetNamespaces = Map.of();
-    private String referenceId;
+    private List<XPathLocation> targetXPaths = List.of();
 
     private XmlSignatureBuilder(Document document) {
         this.document = document;
@@ -80,11 +80,16 @@ public final class XmlSignatureBuilder {
         return this;
     }
 
-    public XmlSignatureBuilder targetXPath(XPathLocation location) {
+    public XmlSignatureBuilder targetXPaths(List<XPathLocation> locations) {
+        this.targetXPaths = locations == null ? List.of() : List.copyOf(locations);
+        return this;
+    }
+
+    public XmlSignatureBuilder addTargetXPath(XPathLocation location) {
         if (location != null) {
-            this.targetXPath = location.expression();
-            this.targetNamespaces = location.namespaces();
-            this.referenceId = location.referenceId();
+            List<XPathLocation> updated = new ArrayList<>(targetXPaths);
+            updated.add(location);
+            this.targetXPaths = List.copyOf(updated);
         }
         return this;
     }
@@ -103,21 +108,23 @@ public final class XmlSignatureBuilder {
         Document workingDocument = XmlSupport.cloneDocument(document);
         var placementTarget = placementResolver.resolve(workingDocument, placementXPath, placementNamespaces);
         validatePlacementTarget(placementTarget);
-        Node payloadNode = resolvePayloadNode(workingDocument, placementTarget);
+        List<Node> payloadTargets = resolvePayloadTargets(workingDocument, placementTarget);
+        List<String> referenceIds = referenceIdsFor(payloadTargets);
         var signedInfoBuilder = new SignedInfoBuilder(digestEngine, prefix);
         var signatureAssembler = new SignatureAssembler(digestEngine, prefix);
         var signedInfo = signedInfoBuilder.build(
                 workingDocument,
-                payloadNode,
+                payloadTargets,
                 signatureType,
                 digestAlgorithm,
                 canonicalizationMethod,
-                referenceId);
+                referenceIds);
         byte[] digestToSign = digestEngine.digest(digestAlgorithm, signedInfo.canonicalizedBytes());
 
         PreparedSignature prepared = new PreparedSignature(
                 workingDocument,
                 placementTarget,
+                List.copyOf(payloadTargets),
                 signatureType,
                 profile,
                 digestAlgorithm,
@@ -137,24 +144,33 @@ public final class XmlSignatureBuilder {
         }
     }
 
-    private Node resolvePayloadNode(Document workingDocument, Node placementTarget) {
-        Node targetNode = targetXPath != null && !targetXPath.isBlank()
-                ? placementResolver.resolve(workingDocument, targetXPath, targetNamespaces)
-                : null;
-
-        if (targetNode != null) {
-            validateTargetNode(targetNode);
+    private List<Node> resolvePayloadTargets(Document workingDocument, Node placementTarget) {
+        if (signatureType == SignatureType.ENVELOPED && targetXPaths.size() > 1) {
+            throw new XmlKitException("Multiple target XPath expressions are not supported for enveloped signatures.");
         }
 
-        Node nodeToSign = targetNode != null ? targetNode : switch (signatureType) {
-            case DETACHED -> placementTarget;
-            case ENVELOPED, ENVELOPING -> workingDocument.getDocumentElement();
-        };
+        List<Node> resolvedTargets = new ArrayList<>();
+        IdentityHashMap<Node, Boolean> seenTargets = new IdentityHashMap<>();
+        for (XPathLocation location : targetXPaths) {
+            Node targetNode = placementResolver.resolve(workingDocument, location.expression(), location.namespaces());
+            validateTargetNode(targetNode);
+            if (seenTargets.put(targetNode, Boolean.TRUE) != null) {
+                throw new XmlKitException("Target XPath expressions must resolve to distinct element nodes.");
+            }
+            resolvedTargets.add(targetNode);
+        }
+
+        if (resolvedTargets.isEmpty()) {
+            resolvedTargets.add(switch (signatureType) {
+                case DETACHED -> placementTarget;
+                case ENVELOPED, ENVELOPING -> workingDocument.getDocumentElement();
+            });
+        }
 
         if (signatureType == SignatureType.DETACHED) {
-            return prepareDetachedPayloadNode(nodeToSign);
+            prepareDetachedPayloadNodes(resolvedTargets);
         }
-        return nodeToSign;
+        return List.copyOf(resolvedTargets);
     }
 
     private void validateTargetNode(Node targetNode) {
@@ -163,11 +179,33 @@ public final class XmlSignatureBuilder {
         }
     }
 
-    private Node prepareDetachedPayloadNode(Node placementTarget) {
-        if (placementTarget instanceof Element element && !element.hasAttribute("Id")) {
-            String id = referenceId != null ? referenceId : "id-" + java.util.UUID.randomUUID().toString();
-            element.setAttribute("Id", id);
+    private void prepareDetachedPayloadNodes(List<Node> payloadTargets) {
+        for (int index = 0; index < payloadTargets.size(); index++) {
+            Node payloadTarget = payloadTargets.get(index);
+            if (payloadTarget instanceof Element element && !element.hasAttribute("Id")) {
+                String configuredReferenceId = index < targetXPaths.size() ? targetXPaths.get(index).referenceId()
+                        : null;
+                String id = configuredReferenceId != null ? configuredReferenceId
+                        : "id-" + java.util.UUID.randomUUID().toString();
+                element.setAttribute("Id", id);
+            }
         }
-        return placementTarget;
+    }
+
+    private String referenceIdFor(Node payloadTarget) {
+        if (payloadTarget instanceof Element element && element.hasAttribute("Id")) {
+            return element.getAttribute("Id");
+        }
+        return null;
+    }
+
+    private List<String> referenceIdsFor(List<Node> payloadTargets) {
+        List<String> referenceIds = new ArrayList<>(payloadTargets.size());
+        for (int index = 0; index < payloadTargets.size(); index++) {
+            String configuredReferenceId = index < targetXPaths.size() ? targetXPaths.get(index).referenceId() : null;
+            referenceIds.add(
+                    configuredReferenceId != null ? configuredReferenceId : referenceIdFor(payloadTargets.get(index)));
+        }
+        return referenceIds;
     }
 }

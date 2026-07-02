@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.truongnq.xmlkit.exception.XmlKitException;
 
 import com.truongnq.xmlkit.model.DigestAlgorithm;
-import com.truongnq.xmlkit.api.XPathLocation;
-import com.truongnq.xmlkit.api.XmlSignatureBuilder;
 import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
 import com.truongnq.xmlkit.testing.FakeRemoteSigner;
@@ -18,6 +16,7 @@ import com.truongnq.xmlkit.testing.TestCertificates;
 import com.truongnq.xmlkit.testing.TestXml;
 import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class RemoteSigningIntegrationTest {
@@ -72,7 +71,7 @@ class RemoteSigningIntegrationTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .targetXPath(XPathLocation.builder("//slot").build())
+                .targetXPaths(List.of(XPathLocation.builder("//slot").build()))
                 .placementXPath(XPathLocation.builder("//demo").build())
                 .prefix("")
                 .prepare();
@@ -87,6 +86,37 @@ class RemoteSigningIntegrationTest {
         assertTrue(signed.xml().contains("id-"));
 
         System.out.println(signed.xml());
+
+        System.out.println("Time: " + (System.currentTimeMillis() - start));
+    }
+
+    @Test
+    void xmldsigFlowSupportsDetachedSignature2Tag() {
+
+        long start = System.currentTimeMillis();
+
+        FakeRemoteSigner remoteSigner = new FakeRemoteSigner();
+        SigningRequest request = XmlSignatureBuilder
+                .forDocument(TestXml.document("<root><slot>1</slot><slot2>2</slot2><demo/></root>"))
+                .signatureType(SignatureType.DETACHED)
+                .profile(SignatureProfile.XMLDSIG)
+                .certificate(TestCertificates.certificate())
+                .addTargetXPath(XPathLocation.builder("//slot").build())
+                .addTargetXPath(XPathLocation.builder("//slot2").build())
+                .placementXPath(XPathLocation.builder("//demo").build())
+                .prefix("")
+                .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
+
+        assertArrayEquals(request.getDigestToSign(), remoteSigner.lastDigestToSign());
+        assertTrue(signed.xml().contains(Base64.getEncoder().encodeToString(signatureValue)));
+        assertTrue(signed.xml().contains("KeyInfo"));
+        assertFalse(signed.xml().contains("UnsignedProperties"));
+        assertTrue(signed.xml().contains("id-"));
+
+        System.out.println("Sign 2 tag:\n" + signed.xml());
 
         System.out.println("Time: " + (System.currentTimeMillis() - start));
     }
@@ -148,7 +178,7 @@ class RemoteSigningIntegrationTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XADES_T)
                 .certificate(TestCertificates.certificate())
-                .targetXPath(XPathLocation.builder("//slot").build())
+                .targetXPaths(List.of(XPathLocation.builder("//slot").build()))
                 .placementXPath(XPathLocation.builder("//demo").build())
                 .prepare();
 
