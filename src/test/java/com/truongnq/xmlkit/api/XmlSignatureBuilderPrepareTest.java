@@ -25,7 +25,7 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
+                .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
         assertTrue(request.getDigestToSign().length > 0);
@@ -46,7 +46,7 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XADES_T)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
+                .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
         assertInstanceOf(ExtendedSigningRequest.class, request);
@@ -60,7 +60,7 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
+                .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -76,13 +76,15 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
-                .targetXPaths(List.of(
-                        XPathLocation.builder("//data")
-                                .transformUris(List.of(
-                                        "http://www.w3.org/TR/1999/REC-xpath-19991116",
-                                        "http://www.w3.org/2001/10/xml-exc-c14n#"))
-                                .build()))
+                .placementSelector(Selector.builder("//slot").build())
+                .targets(List.of(
+                        TargetReference.of(
+                                Selector.builder("//data").build(),
+                                ReferenceOptions.builder()
+                                        .transformUris(List.of(
+                                                "http://www.w3.org/TR/1999/REC-xpath-19991116",
+                                                "http://www.w3.org/2001/10/xml-exc-c14n#"))
+                                        .build())))
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -99,11 +101,14 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot")
-                        .transformUris(List.of(
-                                "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
-                                "http://www.w3.org/2001/10/xml-exc-c14n#"))
-                        .build())
+                .placementSelector(Selector.builder("//slot").build())
+                .addTarget(
+                        Selector.builder("/invoice").build(),
+                        ReferenceOptions.builder()
+                                .transformUris(List.of(
+                                        "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
+                                        "http://www.w3.org/2001/10/xml-exc-c14n#"))
+                                .build())
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -122,9 +127,12 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot")
-                        .transformUris(List.of("http://www.w3.org/2001/10/xml-exc-c14n#"))
-                        .build())
+                .placementSelector(Selector.builder("//slot").build())
+                .addTarget(
+                        Selector.builder("/invoice").build(),
+                        ReferenceOptions.builder()
+                                .transformUris(List.of("http://www.w3.org/2001/10/xml-exc-c14n#"))
+                                .build())
                 .prepare());
     }
 
@@ -137,7 +145,7 @@ class XmlSignatureBuilderPrepareTest {
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
                 .digestAlgorithm(DigestAlgorithm.SHA512)
-                .placementXPath(XPathLocation.builder("//slot").build())
+                .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -154,7 +162,7 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot/text()").build())
+                .placementSelector(Selector.builder("//slot/text()").build())
                 .prepare());
     }
 
@@ -166,8 +174,8 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
-                .targetXPaths(List.of(XPathLocation.builder("//data").build()))
+                .placementSelector(Selector.builder("//slot").build())
+                .targets(List.of(TargetReference.of(Selector.builder("//data").build())))
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -184,8 +192,10 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
-                .targetXPaths(List.of(XPathLocation.builder("//data").referenceId("custom-client-id").build()))
+                .placementSelector(Selector.builder("//slot").build())
+                .targets(List.of(TargetReference.of(
+                        Selector.builder("//data").build(),
+                        ReferenceOptions.builder().referenceId("custom-client-id").build())))
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -202,10 +212,14 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
-                .targetXPaths(List.of(
-                        XPathLocation.builder("//data").referenceId("data-ref").build(),
-                        XPathLocation.builder("//meta").referenceId("meta-ref").build()))
+                .placementSelector(Selector.builder("//slot").build())
+                .targets(List.of(
+                        TargetReference.of(
+                                Selector.builder("//data").build(),
+                                ReferenceOptions.builder().referenceId("data-ref").build()),
+                        TargetReference.of(
+                                Selector.builder("//meta").build(),
+                                ReferenceOptions.builder().referenceId("meta-ref").build())))
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -222,9 +236,9 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
-                .addTargetXPath(XPathLocation.builder("//data").referenceId("data-ref").build())
-                .addTargetXPath(XPathLocation.builder("//meta").referenceId("meta-ref").build())
+                .placementSelector(Selector.builder("//slot").build())
+                .addTarget(Selector.builder("//data").build(), ReferenceOptions.builder().referenceId("data-ref").build())
+                .addTarget(Selector.builder("//meta").build(), ReferenceOptions.builder().referenceId("meta-ref").build())
                 .prepare();
 
         SignedDocument signed = request.complete(new byte[] { 1, 2, 3 });
@@ -241,10 +255,10 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
-                .targetXPaths(List.of(
-                        XPathLocation.builder("//data").build(),
-                        XPathLocation.builder("/invoice/data").build()))
+                .placementSelector(Selector.builder("//slot").build())
+                .targets(List.of(
+                        TargetReference.of(Selector.builder("//data").build()),
+                        TargetReference.of(Selector.builder("/invoice/data").build())))
                 .prepare());
     }
 
@@ -256,10 +270,10 @@ class XmlSignatureBuilderPrepareTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
-                .targetXPaths(List.of(
-                        XPathLocation.builder("//data").build(),
-                        XPathLocation.builder("//meta").build()))
+                .placementSelector(Selector.builder("//slot").build())
+                .targets(List.of(
+                        TargetReference.of(Selector.builder("//data").build()),
+                        TargetReference.of(Selector.builder("//meta").build())))
                 .prepare());
     }
 

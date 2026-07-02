@@ -37,7 +37,7 @@ class RemoteSigningIntegrationTest {
                 () -> XmlSignatureBuilder.forDocument(TestXml.document("<root><slot/></root>"))
                         .signatureType(SignatureType.ENVELOPED)
                         .profile(SignatureProfile.XMLDSIG)
-                        .placementXPath(XPathLocation.builder("//slot").build())
+                        .placementSelector(Selector.builder("//slot").build())
                         .prepare());
     }
 
@@ -48,7 +48,7 @@ class RemoteSigningIntegrationTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
+                .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
         byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
@@ -71,8 +71,8 @@ class RemoteSigningIntegrationTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .targetXPaths(List.of(XPathLocation.builder("//slot").build()))
-                .placementXPath(XPathLocation.builder("//demo").build())
+                .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
+                .placementSelector(Selector.builder("//demo").build())
                 .prefix("")
                 .prepare();
 
@@ -101,9 +101,9 @@ class RemoteSigningIntegrationTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
                 .certificate(TestCertificates.certificate())
-                .addTargetXPath(XPathLocation.builder("//slot").build())
-                .addTargetXPath(XPathLocation.builder("//slot2").build())
-                .placementXPath(XPathLocation.builder("//demo").build())
+                .addTarget(Selector.builder("//slot").build())
+                .addTarget(Selector.builder("//slot2").build())
+                .placementSelector(Selector.builder("//demo").build())
                 .prefix("")
                 .prepare();
 
@@ -130,7 +130,7 @@ class RemoteSigningIntegrationTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XADES_T)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
+                .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
         byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
@@ -154,7 +154,7 @@ class RemoteSigningIntegrationTest {
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XADES_BES)
                 .certificate(TestCertificates.certificate())
-                .placementXPath(XPathLocation.builder("//slot").build())
+                .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
         byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
@@ -178,8 +178,8 @@ class RemoteSigningIntegrationTest {
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XADES_T)
                 .certificate(TestCertificates.certificate())
-                .targetXPaths(List.of(XPathLocation.builder("//slot").build()))
-                .placementXPath(XPathLocation.builder("//demo").build())
+                .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
+                .placementSelector(Selector.builder("//demo").build())
                 .prepare();
 
         byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);

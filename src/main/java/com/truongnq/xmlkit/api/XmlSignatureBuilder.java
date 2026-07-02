@@ -32,10 +32,8 @@ public final class XmlSignatureBuilder {
     private DigestAlgorithm digestAlgorithm = DigestAlgorithm.SHA256;
     private CanonicalizationMethod canonicalizationMethod = CanonicalizationMethod.C14N_EXCLUSIVE;
     private X509Certificate certificate;
-    private XPathLocation placementLocation;
-    private String placementXPath;
-    private Map<String, String> placementNamespaces = Map.of();
-    private List<XPathLocation> targetXPaths = List.of();
+    private Selector placementSelector;
+    private List<TargetReference> targets = List.of();
 
     private XmlSignatureBuilder(Document document) {
         this.document = document;
@@ -75,25 +73,25 @@ public final class XmlSignatureBuilder {
         return this;
     }
 
-    public XmlSignatureBuilder placementXPath(XPathLocation location) {
-        if (location != null) {
-            this.placementLocation = location;
-            this.placementXPath = location.expression();
-            this.placementNamespaces = location.namespaces();
-        }
+    public XmlSignatureBuilder placementSelector(Selector selector) {
+        this.placementSelector = selector;
         return this;
     }
 
-    public XmlSignatureBuilder targetXPaths(List<XPathLocation> locations) {
-        this.targetXPaths = locations == null ? List.of() : List.copyOf(locations);
+    public XmlSignatureBuilder targets(List<TargetReference> targets) {
+        this.targets = targets == null ? List.of() : List.copyOf(targets);
         return this;
     }
 
-    public XmlSignatureBuilder addTargetXPath(XPathLocation location) {
-        if (location != null) {
-            List<XPathLocation> updated = new ArrayList<>(targetXPaths);
-            updated.add(location);
-            this.targetXPaths = List.copyOf(updated);
+    public XmlSignatureBuilder addTarget(Selector selector) {
+        return addTarget(selector, null);
+    }
+
+    public XmlSignatureBuilder addTarget(Selector selector, ReferenceOptions options) {
+        if (selector != null) {
+            List<TargetReference> updated = new ArrayList<>(targets);
+            updated.add(TargetReference.of(selector, options));
+            this.targets = List.copyOf(updated);
         }
         return this;
     }
@@ -102,15 +100,20 @@ public final class XmlSignatureBuilder {
         if (document == null) {
             throw new XmlKitException("Document is required.");
         }
-        if (placementXPath == null || placementXPath.isBlank()) {
-            throw new XmlKitException("Placement XPath is required.");
+        if (placementSelector == null
+                || placementSelector.expression() == null
+                || placementSelector.expression().isBlank()) {
+            throw new XmlKitException("Placement selector is required.");
         }
         if (certificate == null) {
             throw new XmlKitException("Certificate is required.");
         }
 
         Document workingDocument = XmlSupport.cloneDocument(document);
-        var placementTarget = placementResolver.resolve(workingDocument, placementXPath, placementNamespaces);
+        var placementTarget = placementResolver.resolve(
+                workingDocument,
+                placementSelector.expression(),
+                placementSelector.namespaces());
         validatePlacementTarget(placementTarget);
         List<Node> payloadTargets = resolvePayloadTargets(workingDocument, placementTarget);
         List<String> referenceIds = referenceIdsFor(payloadTargets);
@@ -151,14 +154,15 @@ public final class XmlSignatureBuilder {
     }
 
     private List<Node> resolvePayloadTargets(Document workingDocument, Node placementTarget) {
-        if (signatureType == SignatureType.ENVELOPED && targetXPaths.size() > 1) {
+        if (signatureType == SignatureType.ENVELOPED && targets.size() > 1) {
             throw new XmlKitException("Multiple target XPath expressions are not supported for enveloped signatures.");
         }
 
         List<Node> resolvedTargets = new ArrayList<>();
         IdentityHashMap<Node, Boolean> seenTargets = new IdentityHashMap<>();
-        for (XPathLocation location : targetXPaths) {
-            Node targetNode = placementResolver.resolve(workingDocument, location.expression(), location.namespaces());
+        for (TargetReference target : targets) {
+            Selector selector = target.selector();
+            Node targetNode = placementResolver.resolve(workingDocument, selector.expression(), selector.namespaces());
             validateTargetNode(targetNode);
             if (seenTargets.put(targetNode, Boolean.TRUE) != null) {
                 throw new XmlKitException("Target XPath expressions must resolve to distinct element nodes.");
@@ -189,8 +193,8 @@ public final class XmlSignatureBuilder {
         for (int index = 0; index < payloadTargets.size(); index++) {
             Node payloadTarget = payloadTargets.get(index);
             if (payloadTarget instanceof Element element && !element.hasAttribute("Id")) {
-                String configuredReferenceId = index < targetXPaths.size() ? targetXPaths.get(index).referenceId()
-                        : null;
+                ReferenceOptions options = configuredReferenceOptionsFor(index);
+                String configuredReferenceId = options != null ? options.referenceId() : null;
                 String id = configuredReferenceId != null ? configuredReferenceId
                         : "id-" + java.util.UUID.randomUUID().toString();
                 element.setAttribute("Id", id);
@@ -208,7 +212,8 @@ public final class XmlSignatureBuilder {
     private List<String> referenceIdsFor(List<Node> payloadTargets) {
         List<String> referenceIds = new ArrayList<>(payloadTargets.size());
         for (int index = 0; index < payloadTargets.size(); index++) {
-            String configuredReferenceId = index < targetXPaths.size() ? targetXPaths.get(index).referenceId() : null;
+            ReferenceOptions options = configuredReferenceOptionsFor(index);
+            String configuredReferenceId = options != null ? options.referenceId() : null;
             referenceIds.add(
                     configuredReferenceId != null ? configuredReferenceId : referenceIdFor(payloadTargets.get(index)));
         }
@@ -218,19 +223,16 @@ public final class XmlSignatureBuilder {
     private List<List<String>> referenceTransformUrisFor(List<Node> payloadTargets) {
         List<List<String>> referenceTransformUris = new ArrayList<>(payloadTargets.size());
         for (int index = 0; index < payloadTargets.size(); index++) {
-            XPathLocation location = configuredLocationFor(index);
-            List<String> transformUris = location != null ? location.transformUris() : null;
+            ReferenceOptions options = configuredReferenceOptionsFor(index);
+            List<String> transformUris = options != null ? options.transformUris() : null;
             validateConfiguredTransforms(transformUris);
             referenceTransformUris.add(transformUris);
         }
         return referenceTransformUris;
     }
 
-    private XPathLocation configuredLocationFor(int index) {
-        if (!targetXPaths.isEmpty()) {
-            return index < targetXPaths.size() ? targetXPaths.get(index) : null;
-        }
-        return placementLocation;
+    private ReferenceOptions configuredReferenceOptionsFor(int index) {
+        return index < targets.size() ? targets.get(index).options() : null;
     }
 
     private void validateConfiguredTransforms(List<String> transformUris) {

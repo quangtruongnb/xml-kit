@@ -101,10 +101,14 @@ class SignaturePlacementIntegrationTest {
             .signatureType(SignatureType.DETACHED)
             .profile(SignatureProfile.XMLDSIG)
             .certificate(TestCertificates.certificate())
-            .placementXPath(XPathLocation.builder("//slot").build())
-            .targetXPaths(List.of(
-                XPathLocation.builder("//second").referenceId("second-ref").build(),
-                XPathLocation.builder("//first").referenceId("first-ref").build()))
+            .placementSelector(Selector.builder("//slot").build())
+            .targets(List.of(
+                TargetReference.of(
+                    Selector.builder("//second").build(),
+                    ReferenceOptions.builder().referenceId("second-ref").build()),
+                TargetReference.of(
+                    Selector.builder("//first").build(),
+                    ReferenceOptions.builder().referenceId("first-ref").build())))
             .prepare()
             .complete(new byte[] {1, 2, 3});
 
@@ -118,9 +122,9 @@ class SignaturePlacementIntegrationTest {
             .signatureType(SignatureType.ENVELOPING)
             .profile(SignatureProfile.XMLDSIG)
             .certificate(TestCertificates.certificate())
-            .placementXPath(XPathLocation.builder("//container").build())
-            .addTargetXPath(XPathLocation.builder("//payloadA").referenceId("obj-a").build())
-            .addTargetXPath(XPathLocation.builder("//payloadB").referenceId("obj-b").build())
+            .placementSelector(Selector.builder("//container").build())
+            .addTarget(Selector.builder("//payloadA").build(), ReferenceOptions.builder().referenceId("obj-a").build())
+            .addTarget(Selector.builder("//payloadB").build(), ReferenceOptions.builder().referenceId("obj-b").build())
             .prepare()
             .complete(new byte[] {1, 2, 3});
 
@@ -134,7 +138,7 @@ class SignaturePlacementIntegrationTest {
             .signatureType(signatureType)
             .profile(SignatureProfile.XMLDSIG)
             .certificate(TestCertificates.certificate())
-            .placementXPath(XPathLocation.builder(placementXPath).build())
+            .placementSelector(Selector.builder(placementXPath).build())
             .prepare()
             .complete(new byte[] {1, 2, 3});
     }
