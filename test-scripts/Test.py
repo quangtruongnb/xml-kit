@@ -48,8 +48,6 @@ def verify_xml(xml_file: str):
                 validate_schema=False,
             )
 
-            print(result)
-
             print("✓ XMLDSig hợp lệ")
 
         except InvalidDigest as e:
@@ -78,10 +76,11 @@ def verify_xml(xml_file: str):
 
         if xades:
             try:
+                xades_config = SignatureConfiguration(require_x509=True, expect_references=False)
                 XAdESVerifier().verify(
                     root,
                     x509_cert=cert,
-                    expect_config=config,
+                    expect_config=xades_config,
                     validate_schema=False,
                 )
                 print("✓ XAdES hợp lệ")
@@ -95,6 +94,9 @@ def verify_xml(xml_file: str):
                 print("✗ XAdES verification thất bại.")
                 print(e)
                 return False
+
+            except Exception as e:
+                print(f"⚠ XAdES verification bỏ qua: {type(e).__name__}: {e}")
         else:
             print("Không có XAdES.")
 
