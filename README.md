@@ -134,9 +134,9 @@ Customize how individual references are built:
 ```java
 ReferenceOptions options = ReferenceOptions.builder()
         .referenceId("my-custom-id")
-        .transformUris(List.of(
-            "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
-            "http://www.w3.org/2001/10/xml-exc-c14n#"
+        .transforms(List.of(
+            Transform.of("http://www.w3.org/2000/09/xmldsig#enveloped-signature"),
+            Transform.of("http://www.w3.org/2001/10/xml-exc-c14n#")
         ))
         .build();
 
