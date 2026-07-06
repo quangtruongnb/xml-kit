@@ -9,4 +9,12 @@ public record SignedInfoData(
     Element element,
     byte[] canonicalizedBytes
 ) {
+    public SignedInfoData {
+        canonicalizedBytes = canonicalizedBytes.clone();
+    }
+
+    @Override
+    public byte[] canonicalizedBytes() {
+        return canonicalizedBytes.clone();
+    }
 }

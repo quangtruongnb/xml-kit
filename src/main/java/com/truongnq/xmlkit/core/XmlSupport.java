@@ -20,6 +20,8 @@ public final class XmlSupport {
         try {
             var factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(true);
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
             return factory.newDocumentBuilder().newDocument();
         } catch (Exception exception) {
             throw new SignatureAssemblyException("Unable to create XML document.", exception);
