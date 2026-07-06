@@ -1,5 +1,7 @@
 package com.truongnq.xmlkit.profile.xades;
 
+import static com.truongnq.xmlkit.core.XmlDsigConstants.*;
+
 import com.truongnq.xmlkit.api.PreparedSignature;
 import com.truongnq.xmlkit.api.ValidationMaterial;
 import com.truongnq.xmlkit.core.DigestEngine;

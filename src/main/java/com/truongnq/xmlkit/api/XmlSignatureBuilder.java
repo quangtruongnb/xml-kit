@@ -1,11 +1,14 @@
 package com.truongnq.xmlkit.api;
 
+import static com.truongnq.xmlkit.core.XmlDsigConstants.*;
+
 import com.truongnq.xmlkit.core.TransformEngine;
 import com.truongnq.xmlkit.core.DigestEngine;
 import com.truongnq.xmlkit.core.PlacementResolver;
 import com.truongnq.xmlkit.core.ReferenceData;
 import com.truongnq.xmlkit.core.SignatureAssembler;
 import com.truongnq.xmlkit.core.SignedInfoBuilder;
+import com.truongnq.xmlkit.core.XmlNaming;
 import com.truongnq.xmlkit.core.XmlSupport;
 import com.truongnq.xmlkit.exception.XmlKitException;
 import com.truongnq.xmlkit.model.CanonicalizationMethod;
@@ -22,11 +25,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 public final class XmlSignatureBuilder {
-    private static final String DS_NS = "http://www.w3.org/2000/09/xmldsig#";
-    private static final String ENVELOPED_SIGNATURE_TRANSFORM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
 
     private final DigestEngine digestEngine = new DigestEngine();
-    private final TransformEngine canonicalizationEngine = new TransformEngine();
+    private final TransformEngine transformEngine = new TransformEngine();
     private final PlacementResolver placementResolver = new PlacementResolver();
 
     private Document document;
@@ -264,14 +265,10 @@ public final class XmlSignatureBuilder {
     private void validateConfiguredTransforms(List<Transform> transforms) {
         if (signatureType == SignatureType.ENVELOPED
                 && transforms != null
-                && transforms.stream().noneMatch(t -> ENVELOPED_SIGNATURE_TRANSFORM.equals(t.uri()))) {
+                && transforms.stream().noneMatch(t -> ENVELOPED_SIGNATURE_URI.equals(t.uri()))) {
             throw new XmlKitException(
                     "Enveloped signatures must include the enveloped-signature transform when custom transforms are provided.");
         }
-    }
-
-    private String qName(String localName) {
-        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
     }
 
     private String resolveSignatureId() {
@@ -297,14 +294,15 @@ public final class XmlSignatureBuilder {
     }
 
     private List<ReferenceData> buildAdditionalReferences(List<SignatureObject> resolvedObjects, String resolvedSignatureId) {
+        XmlNaming naming = new XmlNaming(prefix);
         List<ReferenceData> additionalReferences = new ArrayList<>();
         for (SignatureObject obj : resolvedObjects) {
             if (!obj.includeInSignedInfo()) {
                 continue;
             }
-            Element tempObject = buildTemporaryObjectElement(obj, resolvedSignatureId);
+            Element tempObject = buildTemporaryObjectElement(obj, resolvedSignatureId, naming);
             List<Transform> transforms = obj.transforms() != null ? obj.transforms() : List.of();
-            byte[] canonicalized = canonicalizationEngine.transform(tempObject, transforms);
+            byte[] canonicalized = transformEngine.transform(tempObject, transforms);
             String digest = digestEngine.digestBase64(digestAlgorithm, canonicalized);
             additionalReferences.add(new ReferenceData(
                     "#" + obj.id(), digestAlgorithm.uri(), digest, transforms));
@@ -312,11 +310,10 @@ public final class XmlSignatureBuilder {
         return additionalReferences;
     }
 
-    private Element buildTemporaryObjectElement(SignatureObject obj, String resolvedSignatureId) {
+    private Element buildTemporaryObjectElement(SignatureObject obj, String resolvedSignatureId, XmlNaming naming) {
         Document tempDoc = XmlSupport.newDocument();
-        Element signature = tempDoc.createElementNS(DS_NS, qName("Signature"));
-        String xmlnsAttr = prefix != null && !prefix.isEmpty() ? "xmlns:" + prefix : "xmlns";
-        signature.setAttribute(xmlnsAttr, DS_NS);
+        Element signature = tempDoc.createElementNS(DS_NS, naming.qName("Signature"));
+        signature.setAttribute(naming.xmlnsAttribute(), DS_NS);
         tempDoc.appendChild(signature);
         String targetUri = resolvedSignatureId != null ? "#" + resolvedSignatureId : "";
         Element object = SignatureAssembler.buildObjectElement(tempDoc, obj, targetUri, prefix);

@@ -1,8 +1,11 @@
 package com.truongnq.xmlkit.profile.xades;
 
+import static com.truongnq.xmlkit.core.XmlDsigConstants.*;
+
 import com.truongnq.xmlkit.api.PreparedSignature;
 import com.truongnq.xmlkit.api.ValidationMaterial;
 import com.truongnq.xmlkit.core.DigestEngine;
+import com.truongnq.xmlkit.core.XmlNaming;
 import com.truongnq.xmlkit.exception.SignatureAssemblyException;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.profile.ProfileObjectBuilder;
@@ -12,24 +15,18 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
-    protected static final String DS_NS = "http://www.w3.org/2000/09/xmldsig#";
-    protected static final String XADES_NS = "http://uri.etsi.org/01903/v1.3.2#";
-    protected final String prefix;
     protected final DigestEngine digestEngine;
+    protected final XmlNaming naming;
 
     protected AbstractXAdESProfileBuilder(DigestEngine digestEngine, String prefix) {
         this.digestEngine = digestEngine;
-        this.prefix = prefix;
-    }
-
-    protected String qName(String localName) {
-        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
+        this.naming = new XmlNaming(prefix);
     }
 
     @Override
     public final Element buildProfileObject(PreparedSignature prepared, byte[] timestampToken, ValidationMaterial validationMaterial) {
         Document document = prepared.document();
-        Element object = document.createElementNS(DS_NS, qName("Object"));
+        Element object = document.createElementNS(DS_NS, naming.qName("Object"));
 
         Element qualifyingProperties = document.createElementNS(XADES_NS, "xades:QualifyingProperties");
         if (prepared.signatureId() != null) {
@@ -94,9 +91,9 @@ abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
     protected Element buildCertificateRef(Document document, X509Certificate certificate, String certificateDigest) {
         Element cert = document.createElementNS(XADES_NS, "xades:Cert");
         Element certDigest = document.createElementNS(XADES_NS, "xades:CertDigest");
-        Element digestMethod = document.createElementNS(DS_NS, qName("DigestMethod"));
+        Element digestMethod = document.createElementNS(DS_NS, naming.qName("DigestMethod"));
         digestMethod.setAttribute("Algorithm", DigestAlgorithm.SHA256.uri());
-        Element digestValue = textElement(document, DS_NS, qName("DigestValue"), certificateDigest);
+        Element digestValue = textElement(document, DS_NS, naming.qName("DigestValue"), certificateDigest);
         certDigest.appendChild(digestMethod);
         certDigest.appendChild(digestValue);
 
@@ -104,13 +101,13 @@ abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
         issuerSerial.appendChild(textElement(
             document,
             DS_NS,
-            qName("X509IssuerName"),
+            naming.qName("X509IssuerName"),
             certificate.getIssuerX500Principal().getName()
         ));
         issuerSerial.appendChild(textElement(
             document,
             DS_NS,
-            qName("X509SerialNumber"),
+            naming.qName("X509SerialNumber"),
             certificate.getSerialNumber().toString()
         ));
 
