@@ -1,6 +1,6 @@
 package com.truongnq.xmlkit.api;
 
-import com.truongnq.xmlkit.core.CanonicalizationEngine;
+import com.truongnq.xmlkit.core.TransformEngine;
 import com.truongnq.xmlkit.core.DigestEngine;
 import com.truongnq.xmlkit.core.PlacementResolver;
 import com.truongnq.xmlkit.core.ReferenceData;
@@ -12,6 +12,7 @@ import com.truongnq.xmlkit.model.CanonicalizationMethod;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
+import com.truongnq.xmlkit.model.Transform;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -25,7 +26,7 @@ public final class XmlSignatureBuilder {
     private static final String ENVELOPED_SIGNATURE_TRANSFORM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
 
     private final DigestEngine digestEngine = new DigestEngine();
-    private final CanonicalizationEngine canonicalizationEngine = new CanonicalizationEngine();
+    private final TransformEngine canonicalizationEngine = new TransformEngine();
     private final PlacementResolver placementResolver = new PlacementResolver();
 
     private Document document;
@@ -136,7 +137,7 @@ public final class XmlSignatureBuilder {
         validatePlacementTarget(placementTarget);
         List<Node> payloadTargets = resolvePayloadTargets(workingDocument, placementTarget);
         List<String> referenceIds = referenceIdsFor(payloadTargets);
-        List<List<String>> referenceTransformUris = referenceTransformUrisFor(payloadTargets);
+        List<List<Transform>> referenceTransformUris = referenceTransformsFor(payloadTargets);
         String resolvedSignatureId = resolveSignatureId();
         List<SignatureObject> resolvedObjects = resolveSignatureObjects();
         List<ReferenceData> additionalReferences = buildAdditionalReferences(resolvedObjects, resolvedSignatureId);
@@ -245,25 +246,25 @@ public final class XmlSignatureBuilder {
         return referenceIds;
     }
 
-    private List<List<String>> referenceTransformUrisFor(List<Node> payloadTargets) {
-        List<List<String>> referenceTransformUris = new ArrayList<>(payloadTargets.size());
+    private List<List<Transform>> referenceTransformsFor(List<Node> payloadTargets) {
+        List<List<Transform>> referenceTransforms = new ArrayList<>(payloadTargets.size());
         for (int index = 0; index < payloadTargets.size(); index++) {
             ReferenceOptions options = configuredReferenceOptionsFor(index);
-            List<String> transformUris = options != null ? options.transformUris() : null;
-            validateConfiguredTransforms(transformUris);
-            referenceTransformUris.add(transformUris);
+            List<Transform> transforms = options != null ? options.transforms() : null;
+            validateConfiguredTransforms(transforms);
+            referenceTransforms.add(transforms);
         }
-        return referenceTransformUris;
+        return referenceTransforms;
     }
 
     private ReferenceOptions configuredReferenceOptionsFor(int index) {
         return index < targets.size() ? targets.get(index).options() : null;
     }
 
-    private void validateConfiguredTransforms(List<String> transformUris) {
+    private void validateConfiguredTransforms(List<Transform> transforms) {
         if (signatureType == SignatureType.ENVELOPED
-                && transformUris != null
-                && !transformUris.contains(ENVELOPED_SIGNATURE_TRANSFORM)) {
+                && transforms != null
+                && transforms.stream().noneMatch(t -> ENVELOPED_SIGNATURE_TRANSFORM.equals(t.uri()))) {
             throw new XmlKitException(
                     "Enveloped signatures must include the enveloped-signature transform when custom transforms are provided.");
         }
@@ -290,7 +291,7 @@ public final class XmlSignatureBuilder {
             }
             resolved.add(new SignatureObject(
                     obj.content(), obj.properties(), objId,
-                    obj.includeInSignedInfo(), obj.transformUris()));
+                    obj.includeInSignedInfo(), obj.transforms()));
         }
         return List.copyOf(resolved);
     }
@@ -302,9 +303,9 @@ public final class XmlSignatureBuilder {
                 continue;
             }
             Element tempObject = buildTemporaryObjectElement(obj, resolvedSignatureId);
-            byte[] canonicalized = canonicalizationEngine.canonicalize(tempObject, canonicalizationMethod);
+            List<Transform> transforms = obj.transforms() != null ? obj.transforms() : List.of();
+            byte[] canonicalized = canonicalizationEngine.transform(tempObject, transforms);
             String digest = digestEngine.digestBase64(digestAlgorithm, canonicalized);
-            List<String> transforms = obj.transformUris() != null ? obj.transformUris() : List.of();
             additionalReferences.add(new ReferenceData(
                     "#" + obj.id(), digestAlgorithm.uri(), digest, transforms));
         }
@@ -317,31 +318,9 @@ public final class XmlSignatureBuilder {
         String xmlnsAttr = prefix != null && !prefix.isEmpty() ? "xmlns:" + prefix : "xmlns";
         signature.setAttribute(xmlnsAttr, DS_NS);
         tempDoc.appendChild(signature);
-        Element object = tempDoc.createElementNS(DS_NS, qName("Object"));
-        if (obj.id() != null) {
-            object.setAttribute("Id", obj.id());
-        }
-        if (obj.isProperties()) {
-            buildSignaturePropertiesContent(tempDoc, object, obj, resolvedSignatureId);
-        } else {
-            object.appendChild(tempDoc.importNode(obj.content(), true));
-        }
+        String targetUri = resolvedSignatureId != null ? "#" + resolvedSignatureId : "";
+        Element object = SignatureAssembler.buildObjectElement(tempDoc, obj, targetUri, prefix);
         signature.appendChild(object);
         return object;
-    }
-
-    private void buildSignaturePropertiesContent(Document doc, Element object, SignatureObject obj, String resolvedSignatureId) {
-        String targetUri = resolvedSignatureId != null ? "#" + resolvedSignatureId : "";
-        Element sigProperties = doc.createElementNS(DS_NS, qName("SignatureProperties"));
-        for (SignatureProperty prop : obj.properties()) {
-            Element sigProperty = doc.createElementNS(DS_NS, qName("SignatureProperty"));
-            if (prop.id() != null) {
-                sigProperty.setAttribute("Id", prop.id());
-            }
-            sigProperty.setAttribute("Target", targetUri);
-            sigProperty.appendChild(doc.importNode(prop.content(), true));
-            sigProperties.appendChild(sigProperty);
-        }
-        object.appendChild(sigProperties);
     }
 }

@@ -3,6 +3,7 @@ package com.truongnq.xmlkit.core;
 import com.truongnq.xmlkit.model.CanonicalizationMethod;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureType;
+import com.truongnq.xmlkit.model.Transform;
 import java.util.ArrayList;
 import java.util.List;
 import org.w3c.dom.Document;
@@ -11,18 +12,19 @@ import org.w3c.dom.Node;
 
 public final class SignedInfoBuilder {
     private static final String DS_NS = "http://www.w3.org/2000/09/xmldsig#";
-    private final ReferenceBuilder referenceBuilder;
-    private final CanonicalizationEngine canonicalizationEngine;
+    private static final String XPATH_URI = "http://www.w3.org/TR/1999/REC-xpath-19991116";
 
+    private final ReferenceBuilder referenceBuilder;
+    private final TransformEngine transformEngine;
     private final String prefix;
 
     public SignedInfoBuilder(DigestEngine digestEngine, String prefix) {
-        this(new ReferenceBuilder(digestEngine, new CanonicalizationEngine(), prefix), new CanonicalizationEngine(), prefix);
+        this(new ReferenceBuilder(digestEngine, new TransformEngine(), prefix), new TransformEngine(), prefix);
     }
 
-    public SignedInfoBuilder(ReferenceBuilder referenceBuilder, CanonicalizationEngine canonicalizationEngine, String prefix) {
+    public SignedInfoBuilder(ReferenceBuilder referenceBuilder, TransformEngine transformEngine, String prefix) {
         this.referenceBuilder = referenceBuilder;
-        this.canonicalizationEngine = canonicalizationEngine;
+        this.transformEngine = transformEngine;
         this.prefix = prefix;
     }
 
@@ -37,7 +39,7 @@ public final class SignedInfoBuilder {
         DigestAlgorithm digestAlgorithm,
         CanonicalizationMethod canonicalizationMethod,
         List<String> referenceIds,
-        List<List<String>> referenceTransformUris,
+        List<List<Transform>> referenceTransforms,
         List<ReferenceData> additionalReferences
     ) {
         List<ReferenceData> references = new ArrayList<>();
@@ -49,7 +51,7 @@ public final class SignedInfoBuilder {
                 digestAlgorithm,
                 canonicalizationMethod,
                 referenceIds.get(index),
-                referenceTransformUris.get(index)
+                referenceTransforms.get(index)
             ));
         }
         if (additionalReferences != null) {
@@ -62,7 +64,19 @@ public final class SignedInfoBuilder {
             digestAlgorithm,
             references
         );
-        byte[] canonicalizedBytes = canonicalizationEngine.canonicalize(signedInfoElement, canonicalizationMethod);
+        // Exclusive C14N on a detached element requires visibly-utilized namespace
+        // declarations to be explicitly present. createElementNS creates the binding
+        // implicitly, but Apache XML Security's C14N may not render it unless it
+        // appears as an explicit xmlns attribute. Set it so the canonicalized output
+        // matches what third-party validators (e.g. Python signxml) expect.
+        if (prefix != null && !prefix.isEmpty()) {
+            signedInfoElement.setAttributeNS(
+                "http://www.w3.org/2000/xmlns/", "xmlns:" + prefix, DS_NS);
+        } else {
+            signedInfoElement.setAttributeNS(
+                "http://www.w3.org/2000/xmlns/", "xmlns", DS_NS);
+        }
+        byte[] canonicalizedBytes = transformEngine.transform(signedInfoElement, canonicalizationMethod.uri());
 
         return new SignedInfoData(
             List.copyOf(references),
@@ -93,14 +107,19 @@ public final class SignedInfoBuilder {
             reference.setAttribute("URI", referenceData.uri());
             root.appendChild(reference);
 
-            if (!referenceData.transformUris().isEmpty()) {
-                Element transforms = document.createElementNS(DS_NS, qName("Transforms"));
-                for (String transformUri : referenceData.transformUris()) {
-                    Element transform = document.createElementNS(DS_NS, qName("Transform"));
-                    transform.setAttribute("Algorithm", transformUri);
-                    transforms.appendChild(transform);
+            if (!referenceData.transforms().isEmpty()) {
+                Element transformsElem = document.createElementNS(DS_NS, qName("Transforms"));
+                for (Transform t : referenceData.transforms()) {
+                    Element transformElem = document.createElementNS(DS_NS, qName("Transform"));
+                    transformElem.setAttribute("Algorithm", t.uri());
+                    if (XPATH_URI.equals(t.uri()) && t.xpathExpression() != null) {
+                        Element xpathElem = document.createElementNS(DS_NS, qName("XPath"));
+                        xpathElem.setTextContent(t.xpathExpression());
+                        transformElem.appendChild(xpathElem);
+                    }
+                    transformsElem.appendChild(transformElem);
                 }
-                reference.appendChild(transforms);
+                reference.appendChild(transformsElem);
             }
 
             Element digestMethod = document.createElementNS(DS_NS, qName("DigestMethod"));

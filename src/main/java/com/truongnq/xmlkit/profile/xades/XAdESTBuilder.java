@@ -7,11 +7,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 public final class XAdESTBuilder extends AbstractXAdESProfileBuilder {
-    private final DigestEngine digestEngine;
-
     public XAdESTBuilder(DigestEngine digestEngine, String prefix) {
-        super(prefix);
-        this.digestEngine = digestEngine;
+        super(digestEngine, prefix);
     }
 
     @Override

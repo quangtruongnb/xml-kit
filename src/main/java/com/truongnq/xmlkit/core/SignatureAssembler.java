@@ -132,26 +132,31 @@ public final class SignatureAssembler {
         }
         String targetUri = prepared.signatureId() != null ? "#" + prepared.signatureId() : "";
         for (SignatureObject obj : prepared.signatureObjects()) {
-            Element object = document.createElementNS(DS_NS, qName("Object"));
-            if (obj.id() != null) {
-                object.setAttribute("Id", obj.id());
-            }
-            if (obj.isProperties()) {
-                Element sigProperties = document.createElementNS(DS_NS, qName("SignatureProperties"));
-                for (SignatureProperty prop : obj.properties()) {
-                    Element sigProperty = document.createElementNS(DS_NS, qName("SignatureProperty"));
-                    if (prop.id() != null) {
-                        sigProperty.setAttribute("Id", prop.id());
-                    }
-                    sigProperty.setAttribute("Target", targetUri);
-                    sigProperty.appendChild(document.importNode(prop.content(), true));
-                    sigProperties.appendChild(sigProperty);
-                }
-                object.appendChild(sigProperties);
-            } else {
-                object.appendChild(document.importNode(obj.content(), true));
-            }
-            signature.appendChild(object);
+            signature.appendChild(buildObjectElement(document, obj, targetUri, prefix));
         }
+    }
+
+    public static Element buildObjectElement(Document document, SignatureObject obj, String signatureTargetUri, String prefix) {
+        String qPfx = prefix != null && !prefix.isEmpty() ? prefix + ":" : "";
+        Element object = document.createElementNS(DS_NS, qPfx + "Object");
+        if (obj.id() != null) {
+            object.setAttribute("Id", obj.id());
+        }
+        if (obj.isProperties()) {
+            Element sigProperties = document.createElementNS(DS_NS, qPfx + "SignatureProperties");
+            for (SignatureProperty prop : obj.properties()) {
+                Element sigProperty = document.createElementNS(DS_NS, qPfx + "SignatureProperty");
+                if (prop.id() != null) {
+                    sigProperty.setAttribute("Id", prop.id());
+                }
+                sigProperty.setAttribute("Target", signatureTargetUri);
+                sigProperty.appendChild(document.importNode(prop.content(), true));
+                sigProperties.appendChild(sigProperty);
+            }
+            object.appendChild(sigProperties);
+        } else {
+            object.appendChild(document.importNode(obj.content(), true));
+        }
+        return object;
     }
 }

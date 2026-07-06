@@ -14,7 +14,7 @@ import com.truongnq.xmlkit.model.CanonicalizationMethod;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
-import com.truongnq.xmlkit.testing.TestCertificates;
+import com.truongnq.xmlkit.testing.FakeRemoteSigner;
 import com.truongnq.xmlkit.testing.TestXml;
 import java.util.Collections;
 import java.util.List;
@@ -43,9 +43,13 @@ class ProfileLayerTest {
     }
 
     @Test
-    void selectsLongBuilderForLongTermProfiles() {
-        assertInstanceOf(com.truongnq.xmlkit.profile.xades.XAdESLongBuilder.class, factory.forProfile(SignatureProfile.XADES_C));
-        assertInstanceOf(com.truongnq.xmlkit.profile.xades.XAdESLongBuilder.class, factory.forProfile(SignatureProfile.XADES_X_L));
+    void selectsCBuilderForXadesCProfile() {
+        assertInstanceOf(com.truongnq.xmlkit.profile.xades.XAdESCBuilder.class, factory.forProfile(SignatureProfile.XADES_C));
+    }
+
+    @Test
+    void selectsXLBuilderForXadesXLProfile() {
+        assertInstanceOf(com.truongnq.xmlkit.profile.xades.XAdESXLBuilder.class, factory.forProfile(SignatureProfile.XADES_X_L));
     }
 
     @Test
@@ -57,7 +61,9 @@ class ProfileLayerTest {
         assertNotNull(object);
         assertEquals("Object", object.getLocalName());
         assertTrue(xml.contains("QualifyingProperties"));
-        assertTrue(xml.contains("XADES_BES"));
+        assertTrue(xml.contains("SignedSignatureProperties"));
+        assertTrue(xml.contains("SigningCertificate"));
+        assertTrue(xml.contains("CertDigest"));
     }
 
     @Test
@@ -95,7 +101,7 @@ class ProfileLayerTest {
             profile,
             DigestAlgorithm.SHA256,
             CanonicalizationMethod.C14N_INCLUSIVE,
-            TestCertificates.certificate(),
+            FakeRemoteSigner.certificate(),
             signedInfoBuilder.build(
                 document,
                 List.of(document.getDocumentElement()),

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.truongnq.xmlkit.model.CanonicalizationMethod;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureType;
+import com.truongnq.xmlkit.model.Transform;
 import com.truongnq.xmlkit.testing.TestXml;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -25,9 +26,9 @@ class CoreLayerTest {
             "</env:Envelope>"
         );
 
-        byte[] bytes = new CanonicalizationEngine().canonicalize(
+        byte[] bytes = new TransformEngine().transform(
             document.getDocumentElement().getFirstChild().getFirstChild(),
-            CanonicalizationMethod.C14N_INCLUSIVE
+            CanonicalizationMethod.C14N_INCLUSIVE.uri()
         );
         String xml = new String(bytes, StandardCharsets.UTF_8);
 
@@ -43,9 +44,9 @@ class CoreLayerTest {
             "</env:Envelope>"
         );
 
-        byte[] bytes = new CanonicalizationEngine().canonicalize(
+        byte[] bytes = new TransformEngine().transform(
             document.getDocumentElement().getFirstChild().getFirstChild(),
-            CanonicalizationMethod.C14N_EXCLUSIVE
+            CanonicalizationMethod.C14N_EXCLUSIVE.uri()
         );
         String xml = new String(bytes, StandardCharsets.UTF_8);
 
@@ -57,9 +58,9 @@ class CoreLayerTest {
     void canonicalizationEngineSerializesXmlNodes() {
         Document document = TestXml.document("<root><child attr='1'>value</child></root>");
 
-        byte[] bytes = new CanonicalizationEngine().canonicalize(
+        byte[] bytes = new TransformEngine().transform(
             document.getDocumentElement(),
-            CanonicalizationMethod.C14N_INCLUSIVE
+            CanonicalizationMethod.C14N_INCLUSIVE.uri()
         );
 
         assertArrayEquals("<root><child attr=\"1\">value</child></root>".getBytes(StandardCharsets.UTF_8), bytes);
@@ -70,7 +71,7 @@ class CoreLayerTest {
         Document document = TestXml.document("<root><payload>abc</payload></root>");
         Element payload = (Element) document.getDocumentElement().getFirstChild();
 
-        ReferenceData reference = new ReferenceBuilder(new DigestEngine(), new CanonicalizationEngine(), "ds").build(
+        ReferenceData reference = new ReferenceBuilder(new DigestEngine(), new TransformEngine(), "ds").build(
             document,
             payload,
             SignatureType.DETACHED,
@@ -90,7 +91,7 @@ class CoreLayerTest {
         Document document = TestXml.document("<root><payload>abc</payload><other>zzz</other></root>");
         Element payload = (Element) document.getDocumentElement().getFirstChild();
         DigestEngine digestEngine = new DigestEngine();
-        CanonicalizationEngine canonicalizationEngine = new CanonicalizationEngine();
+        TransformEngine canonicalizationEngine = new TransformEngine();
 
         ReferenceData reference = new ReferenceBuilder(digestEngine, canonicalizationEngine, "ds").build(
             document,
@@ -104,11 +105,11 @@ class CoreLayerTest {
 
         String payloadDigest = digestEngine.digestBase64(
             DigestAlgorithm.SHA256,
-            canonicalizationEngine.canonicalize(payload, CanonicalizationMethod.C14N_INCLUSIVE)
+            canonicalizationEngine.transform(payload, CanonicalizationMethod.C14N_INCLUSIVE.uri())
         );
         String wholeDocumentDigest = digestEngine.digestBase64(
             DigestAlgorithm.SHA256,
-            canonicalizationEngine.canonicalize(document.getDocumentElement(), CanonicalizationMethod.C14N_INCLUSIVE)
+            canonicalizationEngine.transform(document.getDocumentElement(), CanonicalizationMethod.C14N_INCLUSIVE.uri())
         );
 
         assertEquals(payloadDigest, reference.digestValue());
@@ -120,7 +121,7 @@ class CoreLayerTest {
         Document document = TestXml.document("<root><payload>abc</payload></root>");
         ReferenceData fixedReference = new ReferenceData("custom-uri", "custom-digest-method", "custom-digest-value", java.util.List.of());
         SignedInfoBuilder builder = new SignedInfoBuilder(
-            new ReferenceBuilder(new DigestEngine(), new CanonicalizationEngine(), "ds") {
+            new ReferenceBuilder(new DigestEngine(), new TransformEngine(), "ds") {
                 @Override
                 public ReferenceData build(
                     Document ignoredDocument,
@@ -129,12 +130,12 @@ class CoreLayerTest {
                     DigestAlgorithm ignoredDigestAlgorithm,
                     CanonicalizationMethod ignoredCanonicalizationMethod,
                     String ignoredClientReferenceId,
-                    List<String> ignoredCustomTransformUris
+                    List<Transform> ignoredCustomTransforms
                 ) {
                     return fixedReference;
                 }
             },
-            new CanonicalizationEngine(),
+            new TransformEngine(),
             "ds"
         );
 

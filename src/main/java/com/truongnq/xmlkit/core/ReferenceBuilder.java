@@ -3,6 +3,7 @@ package com.truongnq.xmlkit.core;
 import com.truongnq.xmlkit.model.CanonicalizationMethod;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureType;
+import com.truongnq.xmlkit.model.Transform;
 import java.util.List;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -12,13 +13,12 @@ import static com.truongnq.xmlkit.model.SignatureType.ENVELOPED;
 
 public class ReferenceBuilder {
     private final DigestEngine digestEngine;
-    private final CanonicalizationEngine canonicalizationEngine;
-
+    private final TransformEngine transformEngine;
     private final String prefix;
 
-    public ReferenceBuilder(DigestEngine digestEngine, CanonicalizationEngine canonicalizationEngine, String prefix) {
+    public ReferenceBuilder(DigestEngine digestEngine, TransformEngine transformEngine, String prefix) {
         this.digestEngine = digestEngine;
-        this.canonicalizationEngine = canonicalizationEngine;
+        this.transformEngine = transformEngine;
         this.prefix = prefix;
     }
 
@@ -33,35 +33,28 @@ public class ReferenceBuilder {
         DigestAlgorithm digestAlgorithm,
         CanonicalizationMethod canonicalizationMethod,
         String clientReferenceId,
-        List<String> customTransformUris
+        List<Transform> customTransforms
     ) {
-        String referenceUri;
-        Node resolvedPayloadNode;
         String dynamicId = clientReferenceId != null ? clientReferenceId : "id-" + java.util.UUID.randomUUID().toString();
 
-        if (signatureType == SignatureType.ENVELOPED) {
-            referenceUri = "";
-            resolvedPayloadNode = document.getDocumentElement();
-        } else if (signatureType == SignatureType.DETACHED) {
-            if (payloadNode instanceof Element element && element.hasAttribute("Id")) {
-                referenceUri = "#" + element.getAttribute("Id");
-            } else {
-                referenceUri = "#" + dynamicId;
-            }
-            resolvedPayloadNode = payloadNode != null ? payloadNode : document.getDocumentElement();
-        } else if (signatureType == SignatureType.ENVELOPING) {
-            referenceUri = "#" + dynamicId;
-            resolvedPayloadNode = buildEnvelopingObjectNode(document, payloadNode, dynamicId);
-        } else {
-            referenceUri = "";
-            resolvedPayloadNode = document.getDocumentElement();
-        }
+        String referenceUri = switch (signatureType) {
+            case ENVELOPED -> "";
+            case DETACHED -> "#" + (payloadNode instanceof Element e && e.hasAttribute("Id") ? e.getAttribute("Id") : dynamicId);
+            case ENVELOPING -> "#" + dynamicId;
+        };
 
+        Node resolvedPayloadNode = switch (signatureType) {
+            case ENVELOPED -> document.getDocumentElement();
+            case DETACHED -> payloadNode != null ? payloadNode : document.getDocumentElement();
+            case ENVELOPING -> buildEnvelopingObjectNode(document, payloadNode, dynamicId);
+        };
+
+        List<Transform> transforms = transformsFor(signatureType, customTransforms);
         String referenceDigest = digestEngine.digestBase64(
             digestAlgorithm,
-            canonicalizationEngine.canonicalize(resolvedPayloadNode, canonicalizationMethod)
+            transformEngine.transform(resolvedPayloadNode, transforms)
         );
-        return new ReferenceData(referenceUri, digestAlgorithm.uri(), referenceDigest, transformsFor(signatureType, customTransformUris));
+        return new ReferenceData(referenceUri, digestAlgorithm.uri(), referenceDigest, transforms);
     }
 
     private Node buildEnvelopingObjectNode(Document document, Node payloadNode, String objectId) {
@@ -78,13 +71,17 @@ public class ReferenceBuilder {
         return object;
     }
 
-    private List<String> transformsFor(SignatureType signatureType, List<String> customTransformUris) {
-        if (customTransformUris != null) {
-            return List.copyOf(customTransformUris);
+    private List<Transform> transformsFor(
+        SignatureType signatureType,
+        List<Transform> customTransforms
+    ) {
+        if (customTransforms != null) {
+            return List.copyOf(customTransforms);
         }
-        if (signatureType == ENVELOPED) {
-            return List.of("http://www.w3.org/2000/09/xmldsig#enveloped-signature");
-        }
-        return List.of();
+        return switch (signatureType) {
+            case ENVELOPED -> List.of(Transform.of("http://www.w3.org/2000/09/xmldsig#enveloped-signature"));
+            case DETACHED -> List.of();
+            case ENVELOPING -> List.of();
+        };
     }
 }

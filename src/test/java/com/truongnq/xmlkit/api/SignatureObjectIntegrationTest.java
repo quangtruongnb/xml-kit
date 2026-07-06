@@ -5,18 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.truongnq.xmlkit.core.CanonicalizationEngine;
+import com.truongnq.xmlkit.core.TransformEngine;
 import com.truongnq.xmlkit.core.DigestEngine;
+import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
-import com.truongnq.xmlkit.testing.TestCertificates;
+import com.truongnq.xmlkit.testing.FakeRemoteSigner;
 import com.truongnq.xmlkit.testing.TestXml;
+import com.truongnq.xmlkit.testing.XmlSignatureVerifier;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 class SignatureObjectIntegrationTest {
+    private final FakeRemoteSigner remoteSigner = new FakeRemoteSigner();
 
     @Test
     void signedGenericObjectAppendsObjectAndReference() {
@@ -24,21 +27,24 @@ class SignatureObjectIntegrationTest {
         Element content = doc.createElement("CustomData");
         content.setTextContent("hello");
 
-        SignedDocument signed = XmlSignatureBuilder.forDocument(doc)
+        SigningRequest request = XmlSignatureBuilder.forDocument(doc)
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
+            .certificate(FakeRemoteSigner.certificate())
             .placementSelector(Selector.builder("//slot").build())
             .addSignatureObject(SignatureObject.builder(content)
                 .id("custom-obj-1")
                 .includeInSignedInfo(true)
                 .build())
-            .prepare()
-            .complete(new byte[] {1, 2, 3});
+            .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
 
         assertTrue(signed.xml().contains("URI=\"#custom-obj-1\""));
         assertTrue(signed.xml().contains("Id=\"custom-obj-1\""));
         assertTrue(signed.xml().contains("<CustomData>hello</CustomData>"));
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -47,16 +53,18 @@ class SignatureObjectIntegrationTest {
         Element content = doc.createElement("Metadata");
         content.setTextContent("info");
 
-        SignedDocument signed = XmlSignatureBuilder.forDocument(doc)
+        SigningRequest request = XmlSignatureBuilder.forDocument(doc)
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
+            .certificate(FakeRemoteSigner.certificate())
             .placementSelector(Selector.builder("//slot").build())
             .addSignatureObject(SignatureObject.builder(content)
                 .includeInSignedInfo(false)
                 .build())
-            .prepare()
-            .complete(new byte[] {1, 2, 3});
+            .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
 
         assertTrue(signed.xml().contains("<Metadata>info</Metadata>"));
         assertTrue(signed.xml().contains("Object"));
@@ -65,6 +73,7 @@ class SignatureObjectIntegrationTest {
         int referenceCount = countByLocalName(signedDoc.getDocumentElement(), "Reference");
         // Only the payload reference, no additional reference for the unsigned object
         assertEquals(1, referenceCount);
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -73,10 +82,10 @@ class SignatureObjectIntegrationTest {
         Element signingTime = doc.createElement("SigningTime");
         signingTime.setTextContent("2026-07-02T00:00:00Z");
 
-        SignedDocument signed = XmlSignatureBuilder.forDocument(doc)
+        SigningRequest request = XmlSignatureBuilder.forDocument(doc)
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
+            .certificate(FakeRemoteSigner.certificate())
             .signatureId("my-sig")
             .placementSelector(Selector.builder("//slot").build())
             .addSignatureObject(SignatureObject.signatureProperties()
@@ -84,8 +93,10 @@ class SignatureObjectIntegrationTest {
                 .addProperty("prop-1", signingTime)
                 .includeInSignedInfo(true)
                 .build())
-            .prepare()
-            .complete(new byte[] {1, 2, 3});
+            .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
 
         String xml = signed.xml();
         assertTrue(xml.contains("Id=\"my-sig\""), "Signature should have Id attribute");
@@ -95,6 +106,7 @@ class SignatureObjectIntegrationTest {
         assertTrue(xml.contains("Target=\"#my-sig\""), "SignatureProperty should target the Signature");
         assertTrue(xml.contains("<SigningTime>2026-07-02T00:00:00Z</SigningTime>"));
         assertTrue(xml.contains("URI=\"#sig-props\""), "SignedInfo should reference the Object");
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -103,38 +115,44 @@ class SignatureObjectIntegrationTest {
         Element content = doc.createElement("Info");
         content.setTextContent("test");
 
-        SignedDocument signed = XmlSignatureBuilder.forDocument(doc)
+        SigningRequest request = XmlSignatureBuilder.forDocument(doc)
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
+            .certificate(FakeRemoteSigner.certificate())
             .placementSelector(Selector.builder("//slot").build())
             .addSignatureObject(SignatureObject.signatureProperties()
                 .addProperty("p1", content)
                 .includeInSignedInfo(false)
                 .build())
-            .prepare()
-            .complete(new byte[] {1, 2, 3});
+            .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
 
         String xml = signed.xml();
         // Signature should have auto-generated Id because SignatureProperties is present
         assertTrue(xml.matches("(?s).*<ds:Signature[^>]+Id=\"id-[^\"]+\".*"), "Signature should have auto-generated Id");
         assertTrue(xml.contains("Target=\"#id-"), "SignatureProperty Target should reference auto-generated Id");
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
     void signatureIdExplicitlySet() {
         Document doc = TestXml.document("<root><slot/></root>");
 
-        SignedDocument signed = XmlSignatureBuilder.forDocument(doc)
+        SigningRequest request = XmlSignatureBuilder.forDocument(doc)
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
+            .certificate(FakeRemoteSigner.certificate())
             .signatureId("explicit-sig-id")
             .placementSelector(Selector.builder("//slot").build())
-            .prepare()
-            .complete(new byte[] {1, 2, 3});
+            .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
 
         assertTrue(signed.xml().contains("Id=\"explicit-sig-id\""));
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -143,34 +161,37 @@ class SignatureObjectIntegrationTest {
         Element content = doc.createElement("Payload");
         content.setTextContent("digest-test");
 
-        SignedDocument signed = XmlSignatureBuilder.forDocument(doc)
+        SigningRequest request = XmlSignatureBuilder.forDocument(doc)
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
+            .certificate(FakeRemoteSigner.certificate())
             .placementSelector(Selector.builder("//slot").build())
             .addSignatureObject(SignatureObject.builder(content)
                 .id("digest-obj")
                 .includeInSignedInfo(true)
                 .build())
-            .prepare()
-            .complete(new byte[] {1, 2, 3});
+            .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
 
         // Recompute the digest from the actual Object element in the signed output
         DigestEngine digestEngine = new DigestEngine();
-        CanonicalizationEngine canonicalizationEngine = new CanonicalizationEngine();
+        TransformEngine canonicalizationEngine = new TransformEngine();
         org.w3c.dom.Document signedDoc = TestXml.document(signed.xml());
         Node objectNode = findByAttribute(signedDoc.getDocumentElement(), "Object", "Id", "digest-obj");
         assertNotNull(objectNode, "Should find Object with Id=digest-obj");
 
         String expectedDigest = digestEngine.digestBase64(
             com.truongnq.xmlkit.model.DigestAlgorithm.SHA256,
-            canonicalizationEngine.canonicalize(
+            canonicalizationEngine.transform(
                 objectNode,
-                com.truongnq.xmlkit.model.CanonicalizationMethod.C14N_INCLUSIVE
+                com.truongnq.xmlkit.model.CanonicalizationMethod.C14N_INCLUSIVE.uri()
             )
         );
         assertTrue(signed.xml().contains("<ds:DigestValue>" + expectedDigest + "</ds:DigestValue>"),
             "Digest in SignedInfo should match the canonicalized Object");
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -181,10 +202,10 @@ class SignatureObjectIntegrationTest {
         Element second = doc.createElement("Second");
         second.setTextContent("2");
 
-        SignedDocument signed = XmlSignatureBuilder.forDocument(doc)
+        SigningRequest request = XmlSignatureBuilder.forDocument(doc)
             .signatureType(SignatureType.ENVELOPED)
             .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
+            .certificate(FakeRemoteSigner.certificate())
             .placementSelector(Selector.builder("//slot").build())
             .addSignatureObject(SignatureObject.builder(first)
                 .id("obj-first")
@@ -194,28 +215,35 @@ class SignatureObjectIntegrationTest {
                 .id("obj-second")
                 .includeInSignedInfo(false)
                 .build())
-            .prepare()
-            .complete(new byte[] {1, 2, 3});
+            .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
 
         String xml = signed.xml();
         assertTrue(xml.indexOf("Id=\"obj-first\"") < xml.indexOf("Id=\"obj-second\""),
             "Objects should appear in builder-call order");
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
     void existingEnvelopingFlowUnchanged() {
-        SignedDocument signed = XmlSignatureBuilder.forDocument(
-                TestXml.document("<root><container/></root>"))
+        Document doc = TestXml.document("<root><container/></root>");
+
+        SigningRequest request = XmlSignatureBuilder.forDocument(doc)
             .signatureType(SignatureType.ENVELOPING)
             .profile(SignatureProfile.XMLDSIG)
-            .certificate(TestCertificates.certificate())
+            .certificate(FakeRemoteSigner.certificate())
             .placementSelector(Selector.builder("//container").build())
-            .prepare()
-            .complete(new byte[] {1, 2, 3});
+            .prepare();
+
+        byte[] signatureValue = remoteSigner.sign(request.getDigestToSign(), DigestAlgorithm.SHA256);
+        SignedDocument signed = request.complete(signatureValue);
 
         assertTrue(signed.xml().contains("Object"));
         assertNull(findAttribute(TestXml.document(signed.xml()).getDocumentElement(), "Signature", "Id"),
             "Signature should not have Id when not explicitly set and no properties");
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     private Node findByAttribute(Node node, String localName, String attrName, String attrValue) {

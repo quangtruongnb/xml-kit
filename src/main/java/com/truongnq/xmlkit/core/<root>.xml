@@ -1,0 +1,97 @@
+<root>
+    <slot Id="id-de41f339-efde-4ad5-985b-64b31179a72c" />
+    <sig />
+    <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:SignedInfo>
+            <ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />
+            <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" />
+            <ds:Reference URI="#id-de41f339-efde-4ad5-985b-64b31179a72c">
+                <ds:Transforms>
+                    <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+                </ds:Transforms>
+                <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+                <ds:DigestValue>Xc17h4b6RCFyIT4fALUXkNQOyeg9Fxe/oXI+QUHbYZE=</ds:DigestValue>
+            </ds:Reference>
+        </ds:SignedInfo>
+        <ds:SignatureValue>CQgH</ds:SignatureValue>
+        <ds:KeyInfo>
+            <ds:X509Data>
+                <ds:X509Certificate>
+                    MIIDDzCCAfegAwIBAgIUMu9LlVyenzrAT9cIyJ2seKgUZvMwDQYJKoZIhvcNAQELBQAwFzEVMBMGA1UEAwwMeG1sLWtpdC10ZXN0MB4XDTI2MDYzMDAxNDkzN1oXDTM2MDYyNzAxNDkzN1owFzEVMBMGA1UEAwwMeG1sLWtpdC10ZXN0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnbTsxOPJ7m+nne8clctXCchCRvBLoRzDTFPMNj7+XHDlfDI9gr74hAl9SEr3m8clyD0SrtSJIdcszQmrXoY4WN5Ibe3P1WwsTVrUn1AlyIiQcRxyI06JotaDP2laJPy7B0Q55KWIm6fleJl9Rq/KucZZ7KBwTggR1z/+yFz2f2sqNAvI8SxchZu+i7pfhRy32PtJbR/l0rkfS8UHWrnYy1MpLH/nGY1M/p8D9wayFd1b3dgcYQp/hYbtVq91mXUMGfL9S+VHGuvH/TQhN11Gv7Cb+Z3cW8dSJgRvDyzOirbTM5jj3KpV1IhC3xiJBvDH1xVYZqkgnWyAoxD54LsGAQIDAQABo1MwUTAdBgNVHQ4EFgQUkHV9zVegHutA+OSlO8Oq2lE/YsswHwYDVR0jBBgwFoAUkHV9zVegHutA+OSlO8Oq2lE/YsswDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAUqyPrnm1UHnsu4Tkoc2jZOVjtO2sivJ7Ccny7lSmykGv/tV6ouGqZaxpQ76fF5syxhHc0XA6vX0gwHs/iyMf7GeGZ1W1vF6qgND3eyQDzWBoEBLhW0vt0IOOKalqv/56j6OflqVKpTMa43axmz2qrBSm9O0nLuNnSH3D9xseM94EijH1p+uEm2lI2R/jjb+j+ApdAyAKTDNnMzvfc559DYFdkNiLsEEAjzjp8O10mfRTvEDqAFuzRK5b4aY1Bm2iK+slYnuV+wiAGtf848yJcVsLM19tZdI3y5mCeMocXgSmBnaNVHcVE3aoBs1QfTGnYCNdP+GVGouffDuAS/z7Zw==</ds:X509Certificate>
+            </ds:X509Data>
+        </ds:KeyInfo>
+        <ds:Object>
+            <xades:QualifyingProperties xmlns:xades="http://uri.etsi.org/01903/v1.3.2#">
+                <xades:SignedProperties>
+                    <xades:SignedSignatureProperties>
+                        <xades:SigningCertificate>
+                            <xades:Cert>
+                                <xades:CertDigest>
+                                    <ds:DigestMethod
+                                        Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+                                    <ds:DigestValue>d1yiDt+pQbxmQH+ynTzOZwUMFoDCNWTU9s3OvIyNkE8=</ds:DigestValue>
+                                </xades:CertDigest>
+                                <xades:IssuerSerial>
+                                    <ds:X509IssuerName>CN=xml-kit-test</ds:X509IssuerName>
+                                    <ds:X509SerialNumber>
+                                        290786000890270936454552595403999717440416409331</ds:X509SerialNumber>
+                                </xades:IssuerSerial>
+                            </xades:Cert>
+                        </xades:SigningCertificate>
+                    </xades:SignedSignatureProperties>
+                </xades:SignedProperties>
+                <xades:UnsignedProperties>
+                    <xades:UnsignedSignatureProperties>
+                        <xades:SignatureTimeStamp>
+                            <xades:EncapsulatedTimeStamp>BwgJ</xades:EncapsulatedTimeStamp>
+                        </xades:SignatureTimeStamp>
+                        <xades:CompleteCertificateRefs>
+                            <xades:CertRefs>
+                                <xades:Cert>
+                                    <xades:CertDigest>
+                                        <ds:DigestMethod
+                                            Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+                                        <ds:DigestValue>d1yiDt+pQbxmQH+ynTzOZwUMFoDCNWTU9s3OvIyNkE8=</ds:DigestValue>
+                                    </xades:CertDigest>
+                                    <xades:IssuerSerial>
+                                        <ds:X509IssuerName>CN=xml-kit-test</ds:X509IssuerName>
+                                        <ds:X509SerialNumber>
+                                            290786000890270936454552595403999717440416409331</ds:X509SerialNumber>
+                                    </xades:IssuerSerial>
+                                </xades:Cert>
+                                <xades:Cert>
+                                    <xades:CertDigest>
+                                        <ds:DigestMethod
+                                            Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+                                        <ds:DigestValue>d1yiDt+pQbxmQH+ynTzOZwUMFoDCNWTU9s3OvIyNkE8=</ds:DigestValue>
+                                    </xades:CertDigest>
+                                    <xades:IssuerSerial>
+                                        <ds:X509IssuerName>CN=xml-kit-test</ds:X509IssuerName>
+                                        <ds:X509SerialNumber>
+                                            290786000890270936454552595403999717440416409331</ds:X509SerialNumber>
+                                    </xades:IssuerSerial>
+                                </xades:Cert>
+                            </xades:CertRefs>
+                        </xades:CompleteCertificateRefs>
+                        <xades:CompleteRevocationRefs>
+                            <xades:CRLRefs>
+                                <xades:CRLRef />
+                            </xades:CRLRefs>
+                        </xades:CompleteRevocationRefs>
+                        <xades:CertificateValues>
+                            <xades:EncapsulatedX509Certificate>
+                                MIIDDzCCAfegAwIBAgIUMu9LlVyenzrAT9cIyJ2seKgUZvMwDQYJKoZIhvcNAQELBQAwFzEVMBMGA1UEAwwMeG1sLWtpdC10ZXN0MB4XDTI2MDYzMDAxNDkzN1oXDTM2MDYyNzAxNDkzN1owFzEVMBMGA1UEAwwMeG1sLWtpdC10ZXN0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnbTsxOPJ7m+nne8clctXCchCRvBLoRzDTFPMNj7+XHDlfDI9gr74hAl9SEr3m8clyD0SrtSJIdcszQmrXoY4WN5Ibe3P1WwsTVrUn1AlyIiQcRxyI06JotaDP2laJPy7B0Q55KWIm6fleJl9Rq/KucZZ7KBwTggR1z/+yFz2f2sqNAvI8SxchZu+i7pfhRy32PtJbR/l0rkfS8UHWrnYy1MpLH/nGY1M/p8D9wayFd1b3dgcYQp/hYbtVq91mXUMGfL9S+VHGuvH/TQhN11Gv7Cb+Z3cW8dSJgRvDyzOirbTM5jj3KpV1IhC3xiJBvDH1xVYZqkgnWyAoxD54LsGAQIDAQABo1MwUTAdBgNVHQ4EFgQUkHV9zVegHutA+OSlO8Oq2lE/YsswHwYDVR0jBBgwFoAUkHV9zVegHutA+OSlO8Oq2lE/YsswDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAUqyPrnm1UHnsu4Tkoc2jZOVjtO2sivJ7Ccny7lSmykGv/tV6ouGqZaxpQ76fF5syxhHc0XA6vX0gwHs/iyMf7GeGZ1W1vF6qgND3eyQDzWBoEBLhW0vt0IOOKalqv/56j6OflqVKpTMa43axmz2qrBSm9O0nLuNnSH3D9xseM94EijH1p+uEm2lI2R/jjb+j+ApdAyAKTDNnMzvfc559DYFdkNiLsEEAjzjp8O10mfRTvEDqAFuzRK5b4aY1Bm2iK+slYnuV+wiAGtf848yJcVsLM19tZdI3y5mCeMocXgSmBnaNVHcVE3aoBs1QfTGnYCNdP+GVGouffDuAS/z7Zw==</xades:EncapsulatedX509Certificate>
+                            <xades:EncapsulatedX509Certificate>
+                                MIIDDzCCAfegAwIBAgIUMu9LlVyenzrAT9cIyJ2seKgUZvMwDQYJKoZIhvcNAQELBQAwFzEVMBMGA1UEAwwMeG1sLWtpdC10ZXN0MB4XDTI2MDYzMDAxNDkzN1oXDTM2MDYyNzAxNDkzN1owFzEVMBMGA1UEAwwMeG1sLWtpdC10ZXN0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnbTsxOPJ7m+nne8clctXCchCRvBLoRzDTFPMNj7+XHDlfDI9gr74hAl9SEr3m8clyD0SrtSJIdcszQmrXoY4WN5Ibe3P1WwsTVrUn1AlyIiQcRxyI06JotaDP2laJPy7B0Q55KWIm6fleJl9Rq/KucZZ7KBwTggR1z/+yFz2f2sqNAvI8SxchZu+i7pfhRy32PtJbR/l0rkfS8UHWrnYy1MpLH/nGY1M/p8D9wayFd1b3dgcYQp/hYbtVq91mXUMGfL9S+VHGuvH/TQhN11Gv7Cb+Z3cW8dSJgRvDyzOirbTM5jj3KpV1IhC3xiJBvDH1xVYZqkgnWyAoxD54LsGAQIDAQABo1MwUTAdBgNVHQ4EFgQUkHV9zVegHutA+OSlO8Oq2lE/YsswHwYDVR0jBBgwFoAUkHV9zVegHutA+OSlO8Oq2lE/YsswDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAUqyPrnm1UHnsu4Tkoc2jZOVjtO2sivJ7Ccny7lSmykGv/tV6ouGqZaxpQ76fF5syxhHc0XA6vX0gwHs/iyMf7GeGZ1W1vF6qgND3eyQDzWBoEBLhW0vt0IOOKalqv/56j6OflqVKpTMa43axmz2qrBSm9O0nLuNnSH3D9xseM94EijH1p+uEm2lI2R/jjb+j+ApdAyAKTDNnMzvfc559DYFdkNiLsEEAjzjp8O10mfRTvEDqAFuzRK5b4aY1Bm2iK+slYnuV+wiAGtf848yJcVsLM19tZdI3y5mCeMocXgSmBnaNVHcVE3aoBs1QfTGnYCNdP+GVGouffDuAS/z7Zw==</xades:EncapsulatedX509Certificate>
+                        </xades:CertificateValues>
+                        <xades:RevocationValues>
+                            <xades:CRLValues>
+                                <xades:EncapsulatedCRLValue />
+                            </xades:CRLValues>
+                        </xades:RevocationValues>
+                    </xades:UnsignedSignatureProperties>
+                </xades:UnsignedProperties>
+            </xades:QualifyingProperties>
+        </ds:Object>
+    </ds:Signature>
+</root>

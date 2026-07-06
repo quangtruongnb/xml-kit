@@ -1,13 +1,14 @@
 package com.truongnq.xmlkit.api;
 
+import com.truongnq.xmlkit.model.Transform;
 import java.util.List;
 
 public record ReferenceOptions(
         String referenceId,
-        List<String> transformUris
+        List<Transform> transforms
 ) {
     public ReferenceOptions {
-        transformUris = transformUris != null ? List.copyOf(transformUris) : null;
+        transforms = transforms != null ? List.copyOf(transforms) : null;
     }
 
     public static Builder builder() {
@@ -16,7 +17,7 @@ public record ReferenceOptions(
 
     public static class Builder {
         private String referenceId;
-        private List<String> transformUris;
+        private List<Transform> transforms;
 
         private Builder() {
         }
@@ -26,13 +27,13 @@ public record ReferenceOptions(
             return this;
         }
 
-        public Builder transformUris(List<String> transformUris) {
-            this.transformUris = transformUris;
+        public Builder transforms(List<Transform> transforms) {
+            this.transforms = transforms;
             return this;
         }
 
         public ReferenceOptions build() {
-            return new ReferenceOptions(referenceId, transformUris);
+            return new ReferenceOptions(referenceId, transforms);
         }
     }
 }

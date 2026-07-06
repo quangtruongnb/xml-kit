@@ -39,10 +39,6 @@ public final class XmlSupport {
         return detachedNode;
     }
 
-    public static byte[] canonicalize(Node node) {
-        return toXml(node).getBytes(StandardCharsets.UTF_8);
-    }
-
     public static String toXml(Node node) {
         try {
             var transformer = TransformerFactory.newInstance().newTransformer();

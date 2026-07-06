@@ -1,5 +1,6 @@
 package com.truongnq.xmlkit.api;
 
+import com.truongnq.xmlkit.model.Transform;
 import java.util.ArrayList;
 import java.util.List;
 import org.w3c.dom.Node;
@@ -9,11 +10,11 @@ public record SignatureObject(
         List<SignatureProperty> properties,
         String id,
         boolean includeInSignedInfo,
-        List<String> transformUris
+        List<Transform> transforms
 ) {
     public SignatureObject {
         properties = properties != null ? List.copyOf(properties) : List.of();
-        transformUris = transformUris != null ? List.copyOf(transformUris) : null;
+        transforms = transforms != null ? List.copyOf(transforms) : null;
         if (content == null && properties.isEmpty()) {
             throw new IllegalArgumentException("Either content or properties must be provided.");
         }
@@ -35,7 +36,7 @@ public record SignatureObject(
         private final Node content;
         private String id;
         private boolean includeInSignedInfo = false;
-        private List<String> transformUris;
+        private List<Transform> transforms;
 
         private Builder(Node content) {
             if (content == null) {
@@ -54,20 +55,20 @@ public record SignatureObject(
             return this;
         }
 
-        public Builder transformUris(List<String> transformUris) {
-            this.transformUris = transformUris;
+        public Builder transforms(List<Transform> transforms) {
+            this.transforms = transforms;
             return this;
         }
 
         public SignatureObject build() {
-            return new SignatureObject(content, List.of(), id, includeInSignedInfo, transformUris);
+            return new SignatureObject(content, List.of(), id, includeInSignedInfo, transforms);
         }
     }
 
     public static class PropertiesBuilder {
         private String id;
         private boolean includeInSignedInfo = false;
-        private List<String> transformUris;
+        private List<Transform> transforms;
         private final List<SignatureProperty> properties = new ArrayList<>();
 
         private PropertiesBuilder() {
@@ -88,13 +89,13 @@ public record SignatureObject(
             return this;
         }
 
-        public PropertiesBuilder transformUris(List<String> transformUris) {
-            this.transformUris = transformUris;
+        public PropertiesBuilder transforms(List<Transform> transforms) {
+            this.transforms = transforms;
             return this;
         }
 
         public SignatureObject build() {
-            return new SignatureObject(null, properties, id, includeInSignedInfo, transformUris);
+            return new SignatureObject(null, properties, id, includeInSignedInfo, transforms);
         }
     }
 }

@@ -12,8 +12,8 @@ import com.truongnq.xmlkit.model.SignatureProfile;
 import com.truongnq.xmlkit.model.SignatureType;
 import com.truongnq.xmlkit.testing.FakeRemoteSigner;
 import com.truongnq.xmlkit.testing.FakeTimestampAuthority;
-import com.truongnq.xmlkit.testing.TestCertificates;
 import com.truongnq.xmlkit.testing.TestXml;
+import com.truongnq.xmlkit.testing.XmlSignatureVerifier;
 import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.List;
@@ -47,7 +47,7 @@ class RemoteSigningIntegrationTest {
         SigningRequest request = XmlSignatureBuilder.forDocument(TestXml.document("<root><slot/></root>"))
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
@@ -58,19 +58,17 @@ class RemoteSigningIntegrationTest {
         assertTrue(signed.xml().contains(Base64.getEncoder().encodeToString(signatureValue)));
         assertTrue(signed.xml().contains("KeyInfo"));
         assertFalse(signed.xml().contains("UnsignedProperties"));
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
     void xmldsigFlowSupportsDetachedSignature() {
-
-        long start = System.currentTimeMillis();
-
         FakeRemoteSigner remoteSigner = new FakeRemoteSigner();
         SigningRequest request = XmlSignatureBuilder
                 .forDocument(TestXml.document("<root><slot>1</slot><demo/></root>"))
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
                 .placementSelector(Selector.builder("//demo").build())
                 .prefix("")
@@ -84,23 +82,17 @@ class RemoteSigningIntegrationTest {
         assertTrue(signed.xml().contains("KeyInfo"));
         assertFalse(signed.xml().contains("UnsignedProperties"));
         assertTrue(signed.xml().contains("id-"));
-
-        System.out.println(signed.xml());
-
-        System.out.println("Time: " + (System.currentTimeMillis() - start));
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
     void xmldsigFlowSupportsDetachedSignature2Tag() {
-
-        long start = System.currentTimeMillis();
-
         FakeRemoteSigner remoteSigner = new FakeRemoteSigner();
         SigningRequest request = XmlSignatureBuilder
                 .forDocument(TestXml.document("<root><slot>1</slot><slot2>2</slot2><demo/></root>"))
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .addTarget(Selector.builder("//slot").build())
                 .addTarget(Selector.builder("//slot2").build())
                 .placementSelector(Selector.builder("//demo").build())
@@ -115,10 +107,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(signed.xml().contains("KeyInfo"));
         assertFalse(signed.xml().contains("UnsignedProperties"));
         assertTrue(signed.xml().contains("id-"));
-
-        System.out.println("Sign 2 tag:\n" + signed.xml());
-
-        System.out.println("Time: " + (System.currentTimeMillis() - start));
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -129,7 +118,7 @@ class RemoteSigningIntegrationTest {
                 TestXml.document("<root><slot/></root>"))
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XADES_T)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
@@ -144,6 +133,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(signed.xml().contains(Base64.getEncoder().encodeToString(timestampToken)));
         assertTrue(signed.xml().contains("UnsignedProperties"));
         assertTrue(signed.xml().contains("EncapsulatedTimeStamp"));
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -153,7 +143,7 @@ class RemoteSigningIntegrationTest {
                 TestXml.document("<root><slot/></root>"))
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XADES_BES)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .placementSelector(Selector.builder("//slot").build())
                 .prepare();
 
@@ -165,8 +155,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(signed.xml().contains("QualifyingProperties"));
         assertTrue(signed.xml().contains("SignedProperties"));
         assertFalse(signed.xml().contains("UnsignedProperties"));
-
-        System.out.println(signed.xml());
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -177,7 +166,7 @@ class RemoteSigningIntegrationTest {
                 TestXml.document("<root><slot>1</slot><demo/></root>"))
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XADES_T)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
                 .placementSelector(Selector.builder("//demo").build())
                 .prepare();
@@ -194,9 +183,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(signed.xml().contains("UnsignedProperties"));
         assertTrue(signed.xml().contains("EncapsulatedTimeStamp"));
         assertTrue(signed.xml().contains("id-"));
-
-        System.out.println("====");
-        System.out.println(signed.xml());
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -209,7 +196,7 @@ class RemoteSigningIntegrationTest {
         SigningRequest request = XmlSignatureBuilder.forDocument(doc)
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
                 .placementSelector(Selector.builder("//demo").build())
                 .addSignatureObject(SignatureObject.builder(customData)
@@ -227,8 +214,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(xml.contains("Id=\"evidence-obj\""), "Object should have the Id");
         assertTrue(xml.contains("<CustomData>evidence-content</CustomData>"));
         assertTrue(xml.contains(Base64.getEncoder().encodeToString(signatureValue)));
-
-        System.out.println("Detached with signed generic object:\n" + xml);
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -241,7 +227,7 @@ class RemoteSigningIntegrationTest {
         SigningRequest request = XmlSignatureBuilder.forDocument(doc)
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
                 .placementSelector(Selector.builder("//demo").build())
                 .addSignatureObject(SignatureObject.builder(metadata)
@@ -256,8 +242,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(remoteSigner.verify(signatureValue, request.getDigestToSign(), DigestAlgorithm.SHA256));
         assertTrue(xml.contains("<Metadata>decoration-only</Metadata>"));
         assertFalse(xml.contains("URI=\"#Metadata\""), "Unsigned object should not be referenced in SignedInfo");
-
-        System.out.println("Detached with unsigned generic object:\n" + xml);
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -272,7 +257,7 @@ class RemoteSigningIntegrationTest {
         SigningRequest request = XmlSignatureBuilder.forDocument(doc)
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .signatureId("sig-001")
                 .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
                 .placementSelector(Selector.builder("//demo").build())
@@ -298,8 +283,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(xml.contains("<SigningTime>2026-07-02T21:00:00Z</SigningTime>"));
         assertTrue(xml.contains("<SignerRole>Approver</SignerRole>"));
         assertTrue(xml.contains("SignatureProperties"));
-
-        System.out.println("Detached with SignatureProperties (explicit signatureId):\n" + xml);
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -312,7 +296,7 @@ class RemoteSigningIntegrationTest {
         SigningRequest request = XmlSignatureBuilder.forDocument(doc)
                 .signatureType(SignatureType.ENVELOPED)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .placementSelector(Selector.builder("//slot").build())
                 .addSignatureObject(SignatureObject.signatureProperties()
                         .addProperty("p1", info)
@@ -328,8 +312,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(xml.matches("(?s).*Signature[^>]+Id=\"id-[^\"]+\".*"), "Signature should have auto-generated Id");
         assertTrue(xml.contains("Target=\"#id-"), "SignatureProperty should target auto-generated Signature Id");
         assertTrue(xml.contains("<Info>auto-id-test</Info>"));
-
-        System.out.println("Enveloped with auto-generated signatureId:\n" + xml);
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -343,7 +326,7 @@ class RemoteSigningIntegrationTest {
         ExtendedSigningRequest request = (ExtendedSigningRequest) XmlSignatureBuilder.forDocument(doc)
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XADES_T)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .signatureId("xades-sig")
                 .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
                 .placementSelector(Selector.builder("//demo").build())
@@ -369,8 +352,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(xml.contains("URI=\"#xades-props\""), "SignedInfo should reference properties");
         assertTrue(xml.contains("Target=\"#xades-sig\""), "Property should target Signature");
         assertTrue(xml.contains("<SigningTime>2026-07-02T21:00:00Z</SigningTime>"));
-
-        System.out.println("XAdES-T with SignatureProperties:\n" + xml);
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -386,7 +368,7 @@ class RemoteSigningIntegrationTest {
         SigningRequest request = XmlSignatureBuilder.forDocument(doc)
                 .signatureType(SignatureType.ENVELOPING)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .placementSelector(Selector.builder("//container").build())
                 .addSignatureObject(SignatureObject.builder(signedExtra)
                         .id("extra-signed")
@@ -409,8 +391,7 @@ class RemoteSigningIntegrationTest {
         assertTrue(xml.contains("<SignedExtra>signed-content</SignedExtra>"));
         // Unsigned extra object
         assertTrue(xml.contains("<UnsignedExtra>unsigned-content</UnsignedExtra>"));
-
-        System.out.println("Enveloping with mixed signed/unsigned objects:\n" + xml);
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
     }
 
     @Test
@@ -427,7 +408,7 @@ class RemoteSigningIntegrationTest {
         SigningRequest request = XmlSignatureBuilder.forDocument(doc)
                 .signatureType(SignatureType.DETACHED)
                 .profile(SignatureProfile.XMLDSIG)
-                .certificate(TestCertificates.certificate())
+                .certificate(FakeRemoteSigner.certificate())
                 .signatureId("multi-sig")
                 .targets(List.of(TargetReference.of(Selector.builder("//slot").build())))
                 .placementSelector(Selector.builder("//demo").build())
@@ -461,8 +442,9 @@ class RemoteSigningIntegrationTest {
         // Order preserved
         assertTrue(xml.indexOf("Id=\"props-obj\"") < xml.indexOf("Id=\"evidence-obj\""),
                 "Objects should appear in builder-call order");
+        assertTrue(XmlSignatureVerifier.verify(signed, request.getDigestToSign()));
 
-        System.out.println("Multiple objects with remote signer:\n" + xml);
+        System.out.println(xml);
 
     }
 }

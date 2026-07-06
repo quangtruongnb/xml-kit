@@ -2,6 +2,7 @@ package com.truongnq.xmlkit.profile.xades;
 
 import com.truongnq.xmlkit.api.PreparedSignature;
 import com.truongnq.xmlkit.api.ValidationMaterial;
+import com.truongnq.xmlkit.core.DigestEngine;
 import com.truongnq.xmlkit.exception.SignatureAssemblyException;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.profile.ProfileObjectBuilder;
@@ -14,8 +15,10 @@ abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
     protected static final String DS_NS = "http://www.w3.org/2000/09/xmldsig#";
     protected static final String XADES_NS = "http://uri.etsi.org/01903/v1.3.2#";
     protected final String prefix;
+    protected final DigestEngine digestEngine;
 
-    protected AbstractXAdESProfileBuilder(String prefix) {
+    protected AbstractXAdESProfileBuilder(DigestEngine digestEngine, String prefix) {
+        this.digestEngine = digestEngine;
         this.prefix = prefix;
     }
 
@@ -27,15 +30,36 @@ abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
     public final Element buildProfileObject(PreparedSignature prepared, byte[] timestampToken, ValidationMaterial validationMaterial) {
         Document document = prepared.document();
         Element object = document.createElementNS(DS_NS, qName("Object"));
+
         Element qualifyingProperties = document.createElementNS(XADES_NS, "xades:QualifyingProperties");
+        if (prepared.signatureId() != null) {
+            qualifyingProperties.setAttribute("Target", "#" + prepared.signatureId());
+        }
         object.appendChild(qualifyingProperties);
 
         Element signedProperties = document.createElementNS(XADES_NS, "xades:SignedProperties");
         qualifyingProperties.appendChild(signedProperties);
-        signedProperties.appendChild(textElement(document, XADES_NS, "xades:Profile", prepared.profile().name()));
+        Element signedSignatureProperties = document.createElementNS(XADES_NS, "xades:SignedSignatureProperties");
+        signedSignatureProperties.appendChild(buildSigningCertificate(document, prepared));
+        signedProperties.appendChild(signedSignatureProperties);
 
         appendUnsignedProperties(document, qualifyingProperties, prepared, timestampToken, validationMaterial);
         return object;
+    }
+
+    private Element buildSigningCertificate(Document document, PreparedSignature prepared) {
+        String certDigest = certificateDigest(prepared.certificate());
+        Element signingCertificate = document.createElementNS(XADES_NS, "xades:SigningCertificate");
+        signingCertificate.appendChild(buildCertificateRef(document, prepared.certificate(), certDigest));
+        return signingCertificate;
+    }
+
+    protected String certificateDigest(X509Certificate certificate) {
+        try {
+            return digestEngine.digestBase64(DigestAlgorithm.SHA256, certificate.getEncoded());
+        } catch (Exception exception) {
+            throw new SignatureAssemblyException("Unable to compute certificate digest.", exception);
+        }
     }
 
     protected void appendUnsignedProperties(
@@ -95,12 +119,6 @@ abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
         return cert;
     }
 
-    protected Element buildCompleteRevocationRefs(Document document) {
-        Element completeRevocationRefs = document.createElementNS(XADES_NS, "xades:CompleteRevocationRefs");
-        completeRevocationRefs.appendChild(document.createElementNS(XADES_NS, "xades:CRLRefs"));
-        return completeRevocationRefs;
-    }
-
     protected Element buildCompleteRevocationRefs(Document document, ValidationMaterial validationMaterial) {
         Element completeRevocationRefs = document.createElementNS(XADES_NS, "xades:CompleteRevocationRefs");
         Element crlRefs = document.createElementNS(XADES_NS, "xades:CRLRefs");
@@ -130,12 +148,6 @@ abstract class AbstractXAdESProfileBuilder implements ProfileObjectBuilder {
         } catch (Exception exception) {
             throw new SignatureAssemblyException("Unable to build XAdES certificate values.", exception);
         }
-    }
-
-    protected Element buildRevocationValues(Document document) {
-        Element revocationValues = document.createElementNS(XADES_NS, "xades:RevocationValues");
-        revocationValues.appendChild(document.createElementNS(XADES_NS, "xades:CRLValues"));
-        return revocationValues;
     }
 
     protected Element buildRevocationValues(Document document, ValidationMaterial validationMaterial) {
