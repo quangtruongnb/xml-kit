@@ -1,5 +1,7 @@
 package com.truongnq.xmlkit.core;
 
+import static com.truongnq.xmlkit.core.XmlDsigConstants.*;
+
 import com.truongnq.xmlkit.api.PreparedSignature;
 import com.truongnq.xmlkit.api.SignatureObject;
 import com.truongnq.xmlkit.api.SignatureProperty;
@@ -15,20 +17,15 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 public final class SignatureAssembler {
-    private static final String DS_NS = "http://www.w3.org/2000/09/xmldsig#";
 
     private final DigestEngine digestEngine;
     private final ProfileObjectBuilderFactory profileObjectBuilderFactory;
-    private final String prefix;
+    private final XmlNaming naming;
 
     public SignatureAssembler(DigestEngine digestEngine, String prefix) {
         this.digestEngine = digestEngine;
         this.profileObjectBuilderFactory = new ProfileObjectBuilderFactory(digestEngine, prefix);
-        this.prefix = prefix;
-    }
-
-    private String qName(String localName) {
-        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
+        this.naming = new XmlNaming(prefix);
     }
 
     public SignedDocument assemble(PreparedSignature prepared, byte[] signatureValue) {
@@ -46,12 +43,12 @@ public final class SignatureAssembler {
         ValidationMaterial validationMaterial
     ) {
         Document document = prepared.document();
-        Element signature = document.createElementNS(DS_NS, qName("Signature"));
+        Element signature = document.createElementNS(DS_NS, naming.qName("Signature"));
         if (prepared.signatureId() != null) {
             signature.setAttribute("Id", prepared.signatureId());
         }
         signature.appendChild(prepared.signedInfo().element());
-        signature.appendChild(textElement(document, DS_NS, qName("SignatureValue"), digestEngine.base64(signatureValue)));
+        signature.appendChild(textElement(document, DS_NS, naming.qName("SignatureValue"), digestEngine.base64(signatureValue)));
         signature.appendChild(buildKeyInfo(document, prepared));
         Element profileObject = profileObjectBuilderFactory
             .forProfile(prepared.profile())
@@ -90,7 +87,7 @@ public final class SignatureAssembler {
         List<Node> payloadTargets = prepared.payloadTargets();
         List<ReferenceData> references = prepared.signedInfo().references();
         for (int index = 0; index < payloadTargets.size(); index++) {
-            Element object = document.createElementNS(DS_NS, qName("Object"));
+            Element object = document.createElementNS(DS_NS, naming.qName("Object"));
             String refUri = references.get(index).uri();
             if (refUri != null && refUri.startsWith("#")) {
                 object.setAttribute("Id", refUri.substring(1));
@@ -104,12 +101,12 @@ public final class SignatureAssembler {
 
     private Element buildKeyInfo(Document document, PreparedSignature prepared) {
         try {
-            Element keyInfo = document.createElementNS(DS_NS, qName("KeyInfo"));
-            Element x509Data = document.createElementNS(DS_NS, qName("X509Data"));
+            Element keyInfo = document.createElementNS(DS_NS, naming.qName("KeyInfo"));
+            Element x509Data = document.createElementNS(DS_NS, naming.qName("X509Data"));
             Element x509Certificate = textElement(
                 document,
                 DS_NS,
-                qName("X509Certificate"),
+                naming.qName("X509Certificate"),
                 Base64.getEncoder().encodeToString(prepared.certificate().getEncoded())
             );
             x509Data.appendChild(x509Certificate);
@@ -132,20 +129,20 @@ public final class SignatureAssembler {
         }
         String targetUri = prepared.signatureId() != null ? "#" + prepared.signatureId() : "";
         for (SignatureObject obj : prepared.signatureObjects()) {
-            signature.appendChild(buildObjectElement(document, obj, targetUri, prefix));
+            signature.appendChild(buildObjectElement(document, obj, targetUri, naming.prefix()));
         }
     }
 
     public static Element buildObjectElement(Document document, SignatureObject obj, String signatureTargetUri, String prefix) {
-        String qPfx = prefix != null && !prefix.isEmpty() ? prefix + ":" : "";
-        Element object = document.createElementNS(DS_NS, qPfx + "Object");
+        XmlNaming n = new XmlNaming(prefix);
+        Element object = document.createElementNS(DS_NS, n.qName("Object"));
         if (obj.id() != null) {
             object.setAttribute("Id", obj.id());
         }
         if (obj.isProperties()) {
-            Element sigProperties = document.createElementNS(DS_NS, qPfx + "SignatureProperties");
+            Element sigProperties = document.createElementNS(DS_NS, n.qName("SignatureProperties"));
             for (SignatureProperty prop : obj.properties()) {
-                Element sigProperty = document.createElementNS(DS_NS, qPfx + "SignatureProperty");
+                Element sigProperty = document.createElementNS(DS_NS, n.qName("SignatureProperty"));
                 if (prop.id() != null) {
                     sigProperty.setAttribute("Id", prop.id());
                 }

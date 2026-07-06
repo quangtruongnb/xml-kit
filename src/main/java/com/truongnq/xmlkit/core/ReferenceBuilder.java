@@ -1,5 +1,7 @@
 package com.truongnq.xmlkit.core;
 
+import static com.truongnq.xmlkit.core.XmlDsigConstants.*;
+
 import com.truongnq.xmlkit.model.CanonicalizationMethod;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
 import com.truongnq.xmlkit.model.SignatureType;
@@ -14,16 +16,12 @@ import static com.truongnq.xmlkit.model.SignatureType.ENVELOPED;
 public class ReferenceBuilder {
     private final DigestEngine digestEngine;
     private final TransformEngine transformEngine;
-    private final String prefix;
+    private final XmlNaming naming;
 
     public ReferenceBuilder(DigestEngine digestEngine, TransformEngine transformEngine, String prefix) {
         this.digestEngine = digestEngine;
         this.transformEngine = transformEngine;
-        this.prefix = prefix;
-    }
-
-    private String qName(String localName) {
-        return prefix != null && !prefix.isEmpty() ? prefix + ":" + localName : localName;
+        this.naming = new XmlNaming(prefix);
     }
 
     public ReferenceData build(
@@ -59,11 +57,10 @@ public class ReferenceBuilder {
 
     private Node buildEnvelopingObjectNode(Document document, Node payloadNode, String objectId) {
         Document detachedDocument = XmlSupport.newDocument();
-        Element signature = detachedDocument.createElementNS("http://www.w3.org/2000/09/xmldsig#", qName("Signature"));
-        String xmlnsAttr = prefix != null && !prefix.isEmpty() ? "xmlns:" + prefix : "xmlns";
-        signature.setAttribute(xmlnsAttr, "http://www.w3.org/2000/09/xmldsig#");
+        Element signature = detachedDocument.createElementNS(DS_NS, naming.qName("Signature"));
+        signature.setAttribute(naming.xmlnsAttribute(), DS_NS);
         detachedDocument.appendChild(signature);
-        Element object = detachedDocument.createElementNS("http://www.w3.org/2000/09/xmldsig#", qName("Object"));
+        Element object = detachedDocument.createElementNS(DS_NS, naming.qName("Object"));
         object.setAttribute("Id", objectId);
         Node payload = payloadNode == null ? document.getDocumentElement() : payloadNode;
         object.appendChild(detachedDocument.importNode(payload, true));
@@ -79,7 +76,7 @@ public class ReferenceBuilder {
             return List.copyOf(customTransforms);
         }
         return switch (signatureType) {
-            case ENVELOPED -> List.of(Transform.of("http://www.w3.org/2000/09/xmldsig#enveloped-signature"));
+            case ENVELOPED -> List.of(Transform.of(ENVELOPED_SIGNATURE_URI));
             case DETACHED -> List.of();
             case ENVELOPING -> List.of();
         };
