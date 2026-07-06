@@ -38,9 +38,9 @@ public final class XmlSignatureBuilder {
     private CanonicalizationMethod canonicalizationMethod = CanonicalizationMethod.C14N_EXCLUSIVE;
     private X509Certificate certificate;
     private Selector placementSelector;
-    private List<TargetReference> targets = List.of();
+    private List<TargetReference> targets = new ArrayList<>();
     private String signatureId;
-    private List<SignatureObject> signatureObjects = List.of();
+    private List<SignatureObject> signatureObjects = new ArrayList<>();
 
     private XmlSignatureBuilder(Document document) {
         this.document = document;
@@ -86,7 +86,7 @@ public final class XmlSignatureBuilder {
     }
 
     public XmlSignatureBuilder targets(List<TargetReference> targets) {
-        this.targets = targets == null ? List.of() : List.copyOf(targets);
+        this.targets = targets == null ? new ArrayList<>() : new ArrayList<>(targets);
         return this;
     }
 
@@ -96,9 +96,7 @@ public final class XmlSignatureBuilder {
 
     public XmlSignatureBuilder addTarget(Selector selector, ReferenceOptions options) {
         if (selector != null) {
-            List<TargetReference> updated = new ArrayList<>(targets);
-            updated.add(TargetReference.of(selector, options));
-            this.targets = List.copyOf(updated);
+            targets.add(TargetReference.of(selector, options));
         }
         return this;
     }
@@ -110,9 +108,7 @@ public final class XmlSignatureBuilder {
 
     public XmlSignatureBuilder addSignatureObject(SignatureObject signatureObject) {
         if (signatureObject != null) {
-            List<SignatureObject> updated = new ArrayList<>(signatureObjects);
-            updated.add(signatureObject);
-            this.signatureObjects = List.copyOf(updated);
+            signatureObjects.add(signatureObject);
         }
         return this;
     }
