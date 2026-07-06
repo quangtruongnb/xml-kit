@@ -18,8 +18,8 @@ public final class SignedInfoBuilder {
     private final TransformEngine transformEngine;
     private final XmlNaming naming;
 
-    public SignedInfoBuilder(DigestEngine digestEngine, String prefix) {
-        this(new ReferenceBuilder(digestEngine, new TransformEngine(), prefix), new TransformEngine(), prefix);
+    public SignedInfoBuilder(DigestEngine digestEngine, TransformEngine transformEngine, String prefix) {
+        this(new ReferenceBuilder(digestEngine, transformEngine, prefix), transformEngine, prefix);
     }
 
     public SignedInfoBuilder(ReferenceBuilder referenceBuilder, TransformEngine transformEngine, String prefix) {

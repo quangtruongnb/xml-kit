@@ -142,7 +142,7 @@ public final class XmlSignatureBuilder {
         String resolvedSignatureId = resolveSignatureId();
         List<SignatureObject> resolvedObjects = resolveSignatureObjects();
         List<ReferenceData> additionalReferences = buildAdditionalReferences(resolvedObjects, resolvedSignatureId);
-        var signedInfoBuilder = new SignedInfoBuilder(digestEngine, prefix);
+        var signedInfoBuilder = new SignedInfoBuilder(digestEngine, transformEngine, prefix);
         var signatureAssembler = new SignatureAssembler(digestEngine, prefix);
         var signedInfo = signedInfoBuilder.build(
                 workingDocument,

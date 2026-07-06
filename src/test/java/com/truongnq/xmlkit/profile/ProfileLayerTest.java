@@ -9,6 +9,7 @@ import com.truongnq.xmlkit.api.PreparedSignature;
 import com.truongnq.xmlkit.api.ValidationMaterial;
 import com.truongnq.xmlkit.core.DigestEngine;
 import com.truongnq.xmlkit.core.SignedInfoBuilder;
+import com.truongnq.xmlkit.core.TransformEngine;
 import com.truongnq.xmlkit.core.XmlSupport;
 import com.truongnq.xmlkit.model.CanonicalizationMethod;
 import com.truongnq.xmlkit.model.DigestAlgorithm;
@@ -24,7 +25,7 @@ import org.w3c.dom.Element;
 
 class ProfileLayerTest {
     private final DigestEngine digestEngine = new DigestEngine();
-    private final SignedInfoBuilder signedInfoBuilder = new SignedInfoBuilder(digestEngine, "ds");
+    private final SignedInfoBuilder signedInfoBuilder = new SignedInfoBuilder(digestEngine, new TransformEngine(), "ds");
     private final ProfileObjectBuilderFactory factory = new ProfileObjectBuilderFactory(digestEngine, "ds");
 
     @Test
